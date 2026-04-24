@@ -287,11 +287,6 @@ export default function App() {
       <header className="hero">
         <div>
           <div className="eyebrow">Adaptivní trenér násobilky</div>
-          <h1>Vybuduj rychlou a přesnou paměť na násobilku.</h1>
-          <p>
-            Trénuj po jedné otázce, zaměř se na slabší příklady a ukládej vše přímo v prohlížeči
-            bez backendu.
-          </p>
         </div>
 
         <div className="hero-stats">
@@ -329,10 +324,17 @@ export default function App() {
         >
           Statistiky
         </button>
+        <button
+          type="button"
+          className={view === 'settings' ? 'active' : ''}
+          onClick={() => setView('settings')}
+        >
+          Nastavení
+        </button>
       </nav>
 
       {view === 'practice' ? (
-        <main className="content-grid">
+        <main className="content-single">
           <div className="practice-panel">
             {currentProblem ? (
               <>
@@ -352,7 +354,23 @@ export default function App() {
               </section>
             )}
           </div>
-
+        </main>
+      ) : view === 'stats' ? (
+        <main className="content-single">
+          <Stats
+            rows={statsRows}
+            filterTable={filterTable}
+            maxFactor={statsMaxFactor}
+            progressMasteredCount={progressMasteredCount}
+            progressPercent={progressPercent}
+            totalExamples={totalExamples}
+            sortBy={sortBy}
+            onFilterChange={setFilterTable}
+            onSortChange={setSortBy}
+          />
+        </main>
+      ) : (
+        <main className="content-single">
           <Settings
             settings={settings}
             availableCount={availableProblems.length}
@@ -376,20 +394,6 @@ export default function App() {
               })
             }
             onResetProgress={resetProgress}
-          />
-        </main>
-      ) : (
-        <main className="content-single">
-          <Stats
-            rows={statsRows}
-            filterTable={filterTable}
-            maxFactor={statsMaxFactor}
-            progressMasteredCount={progressMasteredCount}
-            progressPercent={progressPercent}
-            totalExamples={totalExamples}
-            sortBy={sortBy}
-            onFilterChange={setFilterTable}
-            onSortChange={setSortBy}
           />
         </main>
       )}
