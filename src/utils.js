@@ -41,8 +41,8 @@ export function generateAllProblems() {
 
 export function getDefaultSettings() {
   return {
-    selectedTables: Array.from({ length: MAX_TABLE }, (_, index) => index + 1),
-    progressiveLearning: false,
+    selectedTables: [1, 2, 3, 4, 5],
+    progressiveLearning: true,
   };
 }
 
