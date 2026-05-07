@@ -6,8 +6,7 @@ export const ANSWER_OPTIONS_COUNT = 4;
 export const REVIEW_DELAY_STEPS = 3;
 export const RECENT_PROBLEM_WINDOW = 4;
 export const PROGRESS_MASTERED_MEDIAN_MS = 3000;
-export const MASTERED_MIN_CORRECT = 3;
-export const MASTERED_CORRECT_PER_MISTAKE = 3;
+export const MASTERED_RETRY_CORRECT_COUNT = 3;
 export const MASTERED_EXTRA_TIME_MS = 1000;
 
 export function hasExtendedRange(settings) {
@@ -53,9 +52,14 @@ export function getDefaultProgress(problem) {
     b: problem.b,
     answer: problem.answer,
     last5Times: [],
+    responseTimes: [],
+    recentCorrectTimes: [],
     mistakes: 0,
     correctCount: 0,
     totalAttempts: 0,
+    firstCorrectTime: null,
+    mastered: false,
+    masteryMode: null,
   };
 }
 
@@ -86,25 +90,66 @@ export function clampHistory(times) {
   return times.slice(-MAX_RECENT_TIMES);
 }
 
+export function clampRecentCorrectTimes(times) {
+  return times.slice(-MASTERED_RETRY_CORRECT_COUNT);
+}
+
 export function getMedianTime(progressItem) {
   return median(progressItem.last5Times);
+}
+
+export function getRecentCorrectMedianTime(progressItem) {
+  return median(progressItem.recentCorrectTimes ?? []);
+}
+
+export function getRetryCorrectTimes(progressItem) {
+  if (progressItem.mistakes > 0) {
+    return progressItem.recentCorrectTimes ?? [];
+  }
+
+  return (progressItem.last5Times ?? []).slice(1).slice(-MASTERED_RETRY_CORRECT_COUNT);
+}
+
+export function getEffectiveMasteryTimeLimit(masteryTimeLimit = null) {
+  return masteryTimeLimit ?? PROGRESS_MASTERED_MEDIAN_MS;
+}
+
+export function evaluateMastery(progressItem, masteryTimeLimit = null) {
+  const timeLimit = getEffectiveMasteryTimeLimit(masteryTimeLimit);
+
+  if (progressItem.mistakes === 0) {
+    const firstCorrectTime = progressItem.firstCorrectTime ?? progressItem.last5Times?.[0] ?? null;
+    const mastered =
+      progressItem.correctCount > 0 &&
+      firstCorrectTime !== null &&
+      firstCorrectTime < timeLimit;
+
+    if (mastered) {
+      return {
+        mastered: true,
+        masteryMode: 'first-fast',
+      };
+    }
+  }
+
+  const retryCorrectTimes = getRetryCorrectTimes(progressItem);
+  const medianTime = median(retryCorrectTimes);
+  const mastered =
+    retryCorrectTimes.length >= MASTERED_RETRY_CORRECT_COUNT &&
+    medianTime !== null &&
+    medianTime < timeLimit;
+
+  return {
+    mastered,
+    masteryMode: mastered ? 'retry-median' : null,
+  };
 }
 
 export function isProgressMastered(
   progressItem,
   thresholdMs = PROGRESS_MASTERED_MEDIAN_MS,
 ) {
-  const medianTime = getMedianTime(progressItem);
-  const requiredCorrectCount = Math.max(
-    MASTERED_MIN_CORRECT,
-    progressItem.mistakes * MASTERED_CORRECT_PER_MISTAKE,
-  );
-
-  return (
-    progressItem.correctCount >= requiredCorrectCount &&
-    medianTime !== null &&
-    medianTime < thresholdMs
-  );
+  return evaluateMastery(progressItem, thresholdMs).mastered;
 }
 
 export function getAverageMedianTime(progressItems) {
@@ -129,18 +174,46 @@ export function getMasteryTimeLimit(progressItems) {
 }
 
 export function isMastered(progressItem, masteryTimeLimit = null) {
-  const medianTime = getMedianTime(progressItem);
-  const requiredCorrectCount = Math.max(
-    MASTERED_MIN_CORRECT,
-    progressItem.mistakes * MASTERED_CORRECT_PER_MISTAKE,
-  );
+  return evaluateMastery(progressItem, masteryTimeLimit).mastered;
+}
 
-  return (
-    progressItem.correctCount >= requiredCorrectCount &&
-    medianTime !== null &&
-    masteryTimeLimit !== null &&
-    medianTime <= masteryTimeLimit
-  );
+export function recordWrongAnswer(progressItem, elapsedMs) {
+  return {
+    ...progressItem,
+    totalAttempts: progressItem.totalAttempts + 1,
+    mistakes: progressItem.mistakes + 1,
+    responseTimes: [...(progressItem.responseTimes ?? []), elapsedMs],
+    recentCorrectTimes: [],
+    mastered: false,
+    masteryMode: null,
+  };
+}
+
+export function recordCorrectAnswer(progressItem, elapsedMs, masteryTimeLimit = null) {
+  const last5Times = clampHistory([...progressItem.last5Times, elapsedMs]);
+  const responseTimes = [
+    ...(progressItem.responseTimes ?? progressItem.last5Times),
+    elapsedMs,
+  ];
+  const recentCorrectTimes = clampRecentCorrectTimes([
+    ...(progressItem.recentCorrectTimes ?? []),
+    elapsedMs,
+  ]);
+  const nextProgressItem = {
+    ...progressItem,
+    totalAttempts: progressItem.totalAttempts + 1,
+    correctCount: progressItem.correctCount + 1,
+    last5Times,
+    responseTimes,
+    recentCorrectTimes,
+    firstCorrectTime: progressItem.firstCorrectTime ?? elapsedMs,
+  };
+  const mastery = evaluateMastery(nextProgressItem, masteryTimeLimit);
+
+  return {
+    ...nextProgressItem,
+    ...mastery,
+  };
 }
 
 export function mergeProgress(allProblems, savedProgress = {}) {
@@ -148,10 +221,22 @@ export function mergeProgress(allProblems, savedProgress = {}) {
 
   allProblems.forEach((problem) => {
     const existing = savedProgress[problem.key];
-    merged[problem.key] = {
+    const last5Times = clampHistory(existing?.last5Times || []);
+    const responseTimes = existing?.responseTimes || last5Times;
+    const recentCorrectTimes = clampRecentCorrectTimes(existing?.recentCorrectTimes || []);
+    const hydrated = {
       ...getDefaultProgress(problem),
       ...existing,
-      last5Times: clampHistory(existing?.last5Times || []),
+      last5Times,
+      responseTimes,
+      recentCorrectTimes,
+      firstCorrectTime: existing?.firstCorrectTime ?? responseTimes[0] ?? null,
+    };
+    const mastery = evaluateMastery(hydrated);
+
+    merged[problem.key] = {
+      ...hydrated,
+      ...mastery,
     };
   });
 

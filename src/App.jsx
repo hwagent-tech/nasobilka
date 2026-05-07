@@ -7,7 +7,6 @@ import {
   MAX_TABLE,
   RECENT_PROBLEM_WINDOW,
   REVIEW_DELAY_STEPS,
-  clampHistory,
   createAnswerOptions,
   generateAllProblems,
   getAvailableProblems,
@@ -20,6 +19,8 @@ import {
   loadState,
   mergeProgress,
   pickAdaptiveProblem,
+  recordCorrectAnswer,
+  recordWrongAnswer,
   saveState,
 } from './utils';
 
@@ -178,10 +179,10 @@ export default function App() {
 
       const nextProgress = {
         ...progressRef.current,
-        [currentProblem.key]: {
-          ...progressRef.current[currentProblem.key],
-          mistakes: progressRef.current[currentProblem.key].mistakes + 1,
-        },
+        [currentProblem.key]: recordWrongAnswer(
+          progressRef.current[currentProblem.key],
+          elapsed,
+        ),
       };
       const nextReviewQueue = {
         ...reviewQueueRef.current,
@@ -207,12 +208,7 @@ export default function App() {
     const currentItem = progressRef.current[currentProblem.key];
     const nextProgress = {
       ...progressRef.current,
-      [currentProblem.key]: {
-        ...currentItem,
-        totalAttempts: currentItem.totalAttempts + 1,
-        correctCount: currentItem.correctCount + 1,
-        last5Times: clampHistory([...currentItem.last5Times, elapsed]),
-      },
+      [currentProblem.key]: recordCorrectAnswer(currentItem, elapsed, masteryTimeLimit),
     };
 
     const nextRecentProblemKeys = [...recentProblemKeysRef.current, currentProblem.key].slice(
