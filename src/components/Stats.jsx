@@ -116,11 +116,6 @@ export default function Stats({
                   </td>
                   <td>
                     {formatMs(statsTime.value)}
-                    {statsTime.value !== null ? (
-                      <small className="stats-time-label">
-                        Průměr z posledních 3 správných
-                      </small>
-                    ) : null}
                   </td>
                   <td>{row.mistakes}</td>
                   <td>{row.totalAttempts}</td>

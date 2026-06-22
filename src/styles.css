@@ -402,13 +402,6 @@ button {
   font-size: 0.9rem;
 }
 
-.stats-time-label {
-  display: block;
-  margin-top: 4px;
-  color: #6586aa;
-  font-size: 0.8rem;
-}
-
 .empty-state {
   text-align: center;
 }
