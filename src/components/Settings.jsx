@@ -68,25 +68,28 @@ export default function Settings({
         </span>
       </label>
 
-      <label className="setting-row">
-        <span>Limit času pro zvládnutí příkladu:</span>
-        <select
-          value={settings.masteryTimeLimitSeconds}
-          onChange={(event) => onMasteryTimeLimitChange(event.target.value)}
-        >
-          {Array.from(
-            {
-              length:
-                MAX_MASTERY_TIME_LIMIT_SECONDS - MIN_MASTERY_TIME_LIMIT_SECONDS + 1,
-            },
-            (_, index) => index + MIN_MASTERY_TIME_LIMIT_SECONDS,
-          ).map((seconds) => (
-            <option key={seconds} value={seconds}>
-              {seconds} s
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="settings-subsection">
+        <h3>Nastavení procvičování</h3>
+        <label className="setting-row">
+          <span>Limit času pro zvládnutí příkladu:</span>
+          <select
+            value={settings.masteryTimeLimitSeconds}
+            onChange={(event) => onMasteryTimeLimitChange(event.target.value)}
+          >
+            {Array.from(
+              {
+                length:
+                  MAX_MASTERY_TIME_LIMIT_SECONDS - MIN_MASTERY_TIME_LIMIT_SECONDS + 1,
+              },
+              (_, index) => index + MIN_MASTERY_TIME_LIMIT_SECONDS,
+            ).map((seconds) => (
+              <option key={seconds} value={seconds}>
+                {seconds} s
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <button type="button" className="danger-button" onClick={onResetProgress}>
         Resetovat postup

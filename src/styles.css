@@ -335,6 +335,20 @@ button {
   margin-top: 4px;
 }
 
+.settings-subsection {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8fbff;
+  border: 1px solid rgba(46, 94, 145, 0.12);
+}
+
+.settings-subsection h3 {
+  margin: 0 0 14px;
+  color: #23466b;
+  font-size: 1rem;
+}
+
 .setting-row {
   display: flex;
   flex-wrap: wrap;
@@ -424,6 +438,20 @@ button {
   .panel-header,
   .stats-controls {
     display: grid;
+  }
+
+  .settings-subsection {
+    padding: 16px;
+  }
+
+  .setting-row {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .setting-row select {
+    width: 100%;
+    min-width: 0;
   }
 
   .question-card,
