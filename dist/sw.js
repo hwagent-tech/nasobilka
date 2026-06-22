@@ -1,5 +1,34 @@
-const CACHE_NAME = 'nasobilka-app-v1';
+const CACHE_NAME = 'nasobilka-app-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+
+function isNavigationRequest(request) {
+  return request.mode === 'navigate' || request.destination === 'document';
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    const networkResponse = await fetch(request);
+    cache.put(request, networkResponse.clone());
+    return networkResponse;
+  } catch {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse ?? caches.match('/');
+  }
+}
+
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const networkResponse = await fetch(request);
+  const cache = await caches.open(CACHE_NAME);
+  cache.put(request, networkResponse.clone());
+  return networkResponse;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -26,23 +55,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  if (isNavigationRequest(event.request)) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
 
-      return fetch(event.request)
-        .then((networkResponse) => {
-          const responseClone = networkResponse.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-
-          return networkResponse;
-        })
-        .catch(() => caches.match('/'));
-    }),
-  );
+  event.respondWith(cacheFirst(event.request).catch(() => caches.match('/')));
 });
