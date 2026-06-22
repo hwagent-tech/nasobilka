@@ -15,18 +15,29 @@ export default function Stats({
   masteryTimeLimitSeconds,
   rows,
   filterTable,
+  filterMastery,
   maxFactor,
   progressMasteredCount,
   progressPercent,
   sortBy,
   totalExamples,
   onFilterChange,
+  onMasteryFilterChange,
   onSortChange,
 }) {
-  const filteredRows =
-    filterTable === 'all'
-      ? rows
-      : rows.filter((row) => row.a === Number(filterTable) || row.b === Number(filterTable));
+  const filteredRows = rows.filter((row) => {
+    const mastered = isProgressMastered(row, masteryTimeLimitSeconds);
+    const matchesTable =
+      filterTable === 'all' ||
+      row.a === Number(filterTable) ||
+      row.b === Number(filterTable);
+    const matchesMastery =
+      filterMastery === 'all' ||
+      (filterMastery === 'mastered' && mastered) ||
+      (filterMastery === 'unmastered' && !mastered);
+
+    return matchesTable && matchesMastery;
+  });
 
   const sortedRows = [...filteredRows].sort(SORTERS[sortBy]);
 
@@ -52,6 +63,18 @@ export default function Stats({
                 Obsahuje {table}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label>
+          Stav
+          <select
+            value={filterMastery}
+            onChange={(event) => onMasteryFilterChange(event.target.value)}
+          >
+            <option value="all">Vše</option>
+            <option value="mastered">Zvládnuto</option>
+            <option value="unmastered">Nezvládnuto</option>
           </select>
         </label>
 

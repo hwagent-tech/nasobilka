@@ -59,6 +59,7 @@ export default function App() {
   const [view, setView] = useState('practice');
   const [sortBy, setSortBy] = useState('numbers');
   const [filterTable, setFilterTable] = useState('all');
+  const [filterMastery, setFilterMastery] = useState('all');
   const [feedback, setFeedback] = useState({
     status: '',
     message: '',
@@ -374,12 +375,14 @@ export default function App() {
             masteryTimeLimitSeconds={masteryTimeLimitSeconds}
             rows={statsRows}
             filterTable={filterTable}
+            filterMastery={filterMastery}
             maxFactor={statsMaxFactor}
             progressMasteredCount={progressMasteredCount}
             progressPercent={progressPercent}
             totalExamples={totalExamples}
             sortBy={sortBy}
             onFilterChange={setFilterTable}
+            onMasteryFilterChange={setFilterMastery}
             onSortChange={setSortBy}
           />
         </main>
