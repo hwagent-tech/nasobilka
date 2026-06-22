@@ -335,6 +335,24 @@ button {
   margin-top: 4px;
 }
 
+.setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  color: #23466b;
+}
+
+.setting-row select {
+  min-width: 120px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 32, 51, 0.12);
+  background: white;
+}
+
 .stats-controls label {
   display: grid;
   gap: 8px;

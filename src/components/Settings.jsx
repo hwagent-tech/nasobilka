@@ -1,4 +1,9 @@
-import { MAX_TABLE, MIN_TABLE } from '../utils';
+import {
+  MAX_MASTERY_TIME_LIMIT_SECONDS,
+  MAX_TABLE,
+  MIN_MASTERY_TIME_LIMIT_SECONDS,
+  MIN_TABLE,
+} from '../utils';
 
 export default function Settings({
   settings,
@@ -7,6 +12,7 @@ export default function Settings({
   onSelectAll,
   onSelectNone,
   onProgressiveChange,
+  onMasteryTimeLimitChange,
   onResetProgress,
 }) {
   const tables = Array.from(
@@ -60,6 +66,26 @@ export default function Settings({
           Postupné učení
           <small>Pozdější násobilky se odemknou po zvládnutí většiny dřívějších.</small>
         </span>
+      </label>
+
+      <label className="setting-row">
+        <span>Limit času pro zvládnutí příkladu:</span>
+        <select
+          value={settings.masteryTimeLimitSeconds}
+          onChange={(event) => onMasteryTimeLimitChange(event.target.value)}
+        >
+          {Array.from(
+            {
+              length:
+                MAX_MASTERY_TIME_LIMIT_SECONDS - MIN_MASTERY_TIME_LIMIT_SECONDS + 1,
+            },
+            (_, index) => index + MIN_MASTERY_TIME_LIMIT_SECONDS,
+          ).map((seconds) => (
+            <option key={seconds} value={seconds}>
+              {seconds} s
+            </option>
+          ))}
+        </select>
       </label>
 
       <button type="button" className="danger-button" onClick={onResetProgress}>

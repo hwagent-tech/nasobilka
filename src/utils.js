@@ -5,9 +5,10 @@ export const MAX_RECENT_TIMES = 5;
 export const ANSWER_OPTIONS_COUNT = 4;
 export const REVIEW_DELAY_STEPS = 3;
 export const RECENT_PROBLEM_WINDOW = 4;
-export const PROGRESS_MASTERED_MEDIAN_MS = 3000;
+export const DEFAULT_MASTERY_TIME_LIMIT_SECONDS = 3;
+export const MIN_MASTERY_TIME_LIMIT_SECONDS = 1;
+export const MAX_MASTERY_TIME_LIMIT_SECONDS = 10;
 export const MASTERED_RETRY_CORRECT_COUNT = 3;
-export const MASTERED_EXTRA_TIME_MS = 1000;
 
 export function hasExtendedRange(settings) {
   return settings.selectedTables.includes(11) || settings.selectedTables.includes(12);
@@ -42,6 +43,7 @@ export function getDefaultSettings() {
   return {
     selectedTables: [1, 2, 3, 4, 5],
     progressiveLearning: true,
+    masteryTimeLimitSeconds: DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
   };
 }
 
@@ -110,12 +112,28 @@ export function getRetryCorrectTimes(progressItem) {
   return (progressItem.last5Times ?? []).slice(1).slice(-MASTERED_RETRY_CORRECT_COUNT);
 }
 
-export function getEffectiveMasteryTimeLimit(masteryTimeLimit = null) {
-  return masteryTimeLimit ?? PROGRESS_MASTERED_MEDIAN_MS;
+export function normalizeMasteryTimeLimitSeconds(value) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    return DEFAULT_MASTERY_TIME_LIMIT_SECONDS;
+  }
+
+  return Math.min(
+    MAX_MASTERY_TIME_LIMIT_SECONDS,
+    Math.max(MIN_MASTERY_TIME_LIMIT_SECONDS, parsed),
+  );
 }
 
-export function evaluateMastery(progressItem, masteryTimeLimit = null) {
-  const timeLimit = getEffectiveMasteryTimeLimit(masteryTimeLimit);
+export function getMasteryTimeLimitMs(masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS) {
+  return normalizeMasteryTimeLimitSeconds(masteryTimeLimitSeconds) * 1000;
+}
+
+export function evaluateMastery(
+  progressItem,
+  masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
+) {
+  const timeLimit = getMasteryTimeLimitMs(masteryTimeLimitSeconds);
 
   if (progressItem.mistakes === 0) {
     const firstCorrectTime = progressItem.firstCorrectTime ?? progressItem.last5Times?.[0] ?? null;
@@ -147,34 +165,16 @@ export function evaluateMastery(progressItem, masteryTimeLimit = null) {
 
 export function isProgressMastered(
   progressItem,
-  thresholdMs = PROGRESS_MASTERED_MEDIAN_MS,
+  masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
 ) {
-  return evaluateMastery(progressItem, thresholdMs).mastered;
+  return evaluateMastery(progressItem, masteryTimeLimitSeconds).mastered;
 }
 
-export function getAverageMedianTime(progressItems) {
-  const medians = progressItems
-    .map((item) => getMedianTime(item))
-    .filter((value) => value !== null);
-
-  if (!medians.length) {
-    return null;
-  }
-
-  return Math.round(medians.reduce((sum, value) => sum + value, 0) / medians.length);
-}
-
-export function getMasteryTimeLimit(progressItems) {
-  const averageMedian = getAverageMedianTime(progressItems);
-  if (averageMedian === null) {
-    return null;
-  }
-
-  return averageMedian + MASTERED_EXTRA_TIME_MS;
-}
-
-export function isMastered(progressItem, masteryTimeLimit = null) {
-  return evaluateMastery(progressItem, masteryTimeLimit).mastered;
+export function isMastered(
+  progressItem,
+  masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
+) {
+  return evaluateMastery(progressItem, masteryTimeLimitSeconds).mastered;
 }
 
 export function recordWrongAnswer(progressItem, elapsedMs) {
@@ -189,7 +189,11 @@ export function recordWrongAnswer(progressItem, elapsedMs) {
   };
 }
 
-export function recordCorrectAnswer(progressItem, elapsedMs, masteryTimeLimit = null) {
+export function recordCorrectAnswer(
+  progressItem,
+  elapsedMs,
+  masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
+) {
   const last5Times = clampHistory([...progressItem.last5Times, elapsedMs]);
   const responseTimes = [
     ...(progressItem.responseTimes ?? progressItem.last5Times),
@@ -208,7 +212,7 @@ export function recordCorrectAnswer(progressItem, elapsedMs, masteryTimeLimit = 
     recentCorrectTimes,
     firstCorrectTime: progressItem.firstCorrectTime ?? elapsedMs,
   };
-  const mastery = evaluateMastery(nextProgressItem, masteryTimeLimit);
+  const mastery = evaluateMastery(nextProgressItem, masteryTimeLimitSeconds);
 
   return {
     ...nextProgressItem,
@@ -216,7 +220,11 @@ export function recordCorrectAnswer(progressItem, elapsedMs, masteryTimeLimit = 
   };
 }
 
-export function mergeProgress(allProblems, savedProgress = {}) {
+export function mergeProgress(
+  allProblems,
+  savedProgress = {},
+  masteryTimeLimitSeconds = DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
+) {
   const merged = {};
 
   allProblems.forEach((problem) => {
@@ -232,7 +240,7 @@ export function mergeProgress(allProblems, savedProgress = {}) {
       recentCorrectTimes,
       firstCorrectTime: existing?.firstCorrectTime ?? responseTimes[0] ?? null,
     };
-    const mastery = evaluateMastery(hydrated);
+    const mastery = evaluateMastery(hydrated, masteryTimeLimitSeconds);
 
     merged[problem.key] = {
       ...hydrated,
@@ -244,9 +252,10 @@ export function mergeProgress(allProblems, savedProgress = {}) {
 }
 
 export function loadState(allProblems) {
+  const defaultSettings = getDefaultSettings();
   const fallback = {
-    settings: getDefaultSettings(),
-    progress: mergeProgress(allProblems),
+    settings: defaultSettings,
+    progress: mergeProgress(allProblems, {}, defaultSettings.masteryTimeLimitSeconds),
   };
 
   try {
@@ -259,16 +268,21 @@ export function loadState(allProblems) {
     const selectedTables = parsed.settings?.selectedTables?.filter(
       (value) => value >= MIN_TABLE && value <= MAX_TABLE,
     );
+    const masteryTimeLimitSeconds = normalizeMasteryTimeLimitSeconds(
+      parsed.settings?.masteryTimeLimitSeconds,
+    );
+    const settings = {
+      ...defaultSettings,
+      ...parsed.settings,
+      selectedTables: selectedTables?.length
+        ? selectedTables
+        : defaultSettings.selectedTables,
+      masteryTimeLimitSeconds,
+    };
 
     return {
-      settings: {
-        ...getDefaultSettings(),
-        ...parsed.settings,
-        selectedTables: selectedTables?.length
-          ? selectedTables
-          : getDefaultSettings().selectedTables,
-      },
-      progress: mergeProgress(allProblems, parsed.progress),
+      settings,
+      progress: mergeProgress(allProblems, parsed.progress, masteryTimeLimitSeconds),
     };
   } catch {
     return fallback;
@@ -305,10 +319,6 @@ export function getAvailableProblems(allProblems, settings, progressMap) {
     return base;
   }
 
-  const masteryTimeLimit = getMasteryTimeLimit(
-    base.map((problem) => progressMap[problem.key]),
-  );
-
   const sortedTables = [...selected].sort((left, right) => left - right);
   const unlockedTables = sortedTables.filter((table) => {
     if (table === sortedTables[0]) {
@@ -324,7 +334,7 @@ export function getAvailableProblems(allProblems, settings, progressMap) {
       (problem) => problem.a === previousTable && problem.b <= maxFactor,
     );
     const masteredCount = previousProblems.filter((problem) =>
-      isMastered(progressMap[problem.key], masteryTimeLimit),
+      isMastered(progressMap[problem.key], settings.masteryTimeLimitSeconds),
     ).length;
 
     return masteredCount >= Math.ceil(previousProblems.length * 0.7);
@@ -401,17 +411,14 @@ function getProblemWeight(problem, progressItem, reviewQueue, masteryTimeLimit) 
   return weight;
 }
 
-function weightedRandomPick(problems, progressMap, reviewQueue) {
-  const masteryTimeLimit = getMasteryTimeLimit(
-    problems.map((problem) => progressMap[problem.key]),
-  );
+function weightedRandomPick(problems, progressMap, reviewQueue, masteryTimeLimitSeconds) {
   const weighted = problems.map((problem) => ({
     problem,
     weight: getProblemWeight(
       problem,
       progressMap[problem.key],
       reviewQueue,
-      masteryTimeLimit,
+      masteryTimeLimitSeconds,
     ),
   }));
   const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
@@ -432,7 +439,13 @@ function weightedRandomPick(problems, progressMap, reviewQueue) {
   return weighted[weighted.length - 1]?.problem ?? null;
 }
 
-export function pickAdaptiveProblem(availableProblems, progressMap, reviewQueue, recentProblemKeys) {
+export function pickAdaptiveProblem(
+  availableProblems,
+  progressMap,
+  reviewQueue,
+  recentProblemKeys,
+  masteryTimeLimitSeconds,
+) {
   if (!availableProblems.length) {
     return null;
   }
@@ -445,10 +458,20 @@ export function pickAdaptiveProblem(availableProblems, progressMap, reviewQueue,
   );
 
   if (readyReviews.length) {
-    return weightedRandomPick(readyReviews, progressMap, reviewQueue);
+    return weightedRandomPick(
+      readyReviews,
+      progressMap,
+      reviewQueue,
+      masteryTimeLimitSeconds,
+    );
   }
 
-  return weightedRandomPick(selectionPool, progressMap, reviewQueue);
+  return weightedRandomPick(
+    selectionPool,
+    progressMap,
+    reviewQueue,
+    masteryTimeLimitSeconds,
+  );
 }
 
 function addCandidateAnswer(candidates, value, correctAnswer) {

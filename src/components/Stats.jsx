@@ -12,6 +12,7 @@ const SORTERS = {
 };
 
 export default function Stats({
+  masteryTimeLimitSeconds,
   rows,
   filterTable,
   maxFactor,
@@ -78,7 +79,7 @@ export default function Stats({
           </thead>
           <tbody>
             {sortedRows.map((row) => {
-              const mastered = isProgressMastered(row);
+              const mastered = isProgressMastered(row, masteryTimeLimitSeconds);
 
               return (
                 <tr key={row.key}>

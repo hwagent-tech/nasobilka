@@ -4,6 +4,7 @@ import Question from './components/Question';
 import Settings from './components/Settings';
 import Stats from './components/Stats';
 import {
+  DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
   MAX_TABLE,
   RECENT_PROBLEM_WINDOW,
   REVIEW_DELAY_STEPS,
@@ -11,13 +12,13 @@ import {
   generateAllProblems,
   getAvailableProblems,
   getDefaultProgress,
-  getMasteryTimeLimit,
   getPracticeMaxFactor,
   getVisibleProblems,
   isProgressMastered,
   isMastered,
   loadState,
   mergeProgress,
+  normalizeMasteryTimeLimitSeconds,
   pickAdaptiveProblem,
   recordCorrectAnswer,
   recordWrongAnswer,
@@ -33,6 +34,7 @@ function buildNextRound(settings, progress, reviewQueue, recentProblemKeys) {
     progress,
     reviewQueue,
     recentProblemKeys,
+    settings.masteryTimeLimitSeconds,
   );
 
   if (!nextProblem) {
@@ -136,11 +138,13 @@ export default function App() {
     [progress, settings],
   );
   const statsMaxFactor = getPracticeMaxFactor(settings);
-  const masteryTimeLimit = useMemo(() => getMasteryTimeLimit(statsRows), [statsRows]);
+  const masteryTimeLimitSeconds = normalizeMasteryTimeLimitSeconds(
+    settings.masteryTimeLimitSeconds ?? DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
+  );
   const totalExamples = statsRows.length;
   const progressMasteredCount = useMemo(
-    () => statsRows.filter((row) => isProgressMastered(row)).length,
-    [statsRows],
+    () => statsRows.filter((row) => isProgressMastered(row, masteryTimeLimitSeconds)).length,
+    [masteryTimeLimitSeconds, statsRows],
   );
   const progressPercent = totalExamples
     ? Math.round((progressMasteredCount / totalExamples) * 100)
@@ -208,7 +212,11 @@ export default function App() {
     const currentItem = progressRef.current[currentProblem.key];
     const nextProgress = {
       ...progressRef.current,
-      [currentProblem.key]: recordCorrectAnswer(currentItem, elapsed, masteryTimeLimit),
+      [currentProblem.key]: recordCorrectAnswer(
+        currentItem,
+        elapsed,
+        masteryTimeLimitSeconds,
+      ),
     };
 
     const nextRecentProblemKeys = [...recentProblemKeysRef.current, currentProblem.key].slice(
@@ -244,6 +252,9 @@ export default function App() {
     setSettings({
       ...nextSettings,
       selectedTables: safeTables,
+      masteryTimeLimitSeconds: normalizeMasteryTimeLimitSeconds(
+        nextSettings.masteryTimeLimitSeconds,
+      ),
     });
   }
 
@@ -257,7 +268,11 @@ export default function App() {
   }
 
   function resetProgress() {
-    const cleanProgress = mergeProgress(allProblems);
+    const cleanProgress = mergeProgress(
+      allProblems,
+      {},
+      settings.masteryTimeLimitSeconds,
+    );
     progressRef.current = cleanProgress;
     reviewQueueRef.current = {};
     recentProblemKeysRef.current = [];
@@ -276,7 +291,9 @@ export default function App() {
   }
 
   const practicedCount = statsRows.filter((row) => row.totalAttempts > 0).length;
-  const masteredCount = statsRows.filter((row) => isMastered(row, masteryTimeLimit)).length;
+  const masteredCount = statsRows.filter((row) =>
+    isMastered(row, masteryTimeLimitSeconds),
+  ).length;
 
   return (
     <div className="app-shell">
@@ -354,6 +371,7 @@ export default function App() {
       ) : view === 'stats' ? (
         <main className="content-single">
           <Stats
+            masteryTimeLimitSeconds={masteryTimeLimitSeconds}
             rows={statsRows}
             filterTable={filterTable}
             maxFactor={statsMaxFactor}
@@ -387,6 +405,12 @@ export default function App() {
               updateSettings({
                 ...settings,
                 progressiveLearning: checked,
+              })
+            }
+            onMasteryTimeLimitChange={(value) =>
+              updateSettings({
+                ...settings,
+                masteryTimeLimitSeconds: Number(value),
               })
             }
             onResetProgress={resetProgress}
