@@ -1,11 +1,11 @@
-import { formatMs, getMedianTime, isProgressMastered } from '../utils';
+import { formatMs, getStatsTimeMetric, isProgressMastered } from '../utils';
 
 const SORTERS = {
   numbers: (left, right) => left.a - right.a || left.b - right.b,
   time: (left, right) => {
-    const leftMedian = getMedianTime(left) ?? -1;
-    const rightMedian = getMedianTime(right) ?? -1;
-    return rightMedian - leftMedian || left.a - right.a || left.b - right.b;
+    const leftTime = getStatsTimeMetric(left).value ?? -1;
+    const rightTime = getStatsTimeMetric(right).value ?? -1;
+    return rightTime - leftTime || left.a - right.a || left.b - right.b;
   },
   mistakes: (left, right) =>
     right.mistakes - left.mistakes || left.a - right.a || left.b - right.b,
@@ -35,7 +35,7 @@ export default function Stats({
       <div className="panel-header">
         <div>
           <h2>Statistiky</h2>
-          <p>Prohlédni si rychlost, posledních 5 časů a počet chyb u každého příkladu.</p>
+          <p>Prohlédni si průměr z posledních 3 správných odpovědí v řadě a počet chyb.</p>
         </div>
         <div className="pill">
           Zvládnuto: {progressMasteredCount} / {totalExamples} ({progressPercent}%)
@@ -59,7 +59,7 @@ export default function Stats({
           Řazení
           <select value={sortBy} onChange={(event) => onSortChange(event.target.value)}>
             <option value="numbers">Podle čísel</option>
-            <option value="time">Podle mediánu času</option>
+            <option value="time">Podle času</option>
             <option value="mistakes">Podle chyb</option>
           </select>
         </label>
@@ -71,8 +71,7 @@ export default function Stats({
             <tr>
               <th>Příklad</th>
               <th>Stav</th>
-              <th>Medián času</th>
-              <th>Posledních 5 časů</th>
+              <th>Průměr času</th>
               <th>Chyby</th>
               <th>Pokusy</th>
             </tr>
@@ -80,21 +79,28 @@ export default function Stats({
           <tbody>
             {sortedRows.map((row) => {
               const mastered = isProgressMastered(row, masteryTimeLimitSeconds);
+              const statsTime = getStatsTimeMetric(row);
 
               return (
                 <tr key={row.key}>
-                <td>
-                  {row.a} × {row.b}
-                </td>
-                <td>
-                  <span className={`status-badge ${mastered ? 'mastered' : 'unmastered'}`}>
-                    {mastered ? 'Zvládnuto' : 'Nezvládnuto'}
-                  </span>
-                </td>
-                <td>{formatMs(getMedianTime(row))}</td>
-                <td>{row.last5Times.length ? row.last5Times.map(formatMs).join(', ') : '—'}</td>
-                <td>{row.mistakes}</td>
-                <td>{row.totalAttempts}</td>
+                  <td>
+                    {row.a} × {row.b}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${mastered ? 'mastered' : 'unmastered'}`}>
+                      {mastered ? 'Zvládnuto' : 'Nezvládnuto'}
+                    </span>
+                  </td>
+                  <td>
+                    {formatMs(statsTime.value)}
+                    {statsTime.value !== null ? (
+                      <small className="stats-time-label">
+                        Průměr z posledních 3 správných
+                      </small>
+                    ) : null}
+                  </td>
+                  <td>{row.mistakes}</td>
+                  <td>{row.totalAttempts}</td>
                 </tr>
               );
             })}
