@@ -113,10 +113,14 @@ export function getAverageTime(progressItem) {
 }
 
 export function getRecentCorrectAverageTime(progressItem) {
-  return average(progressItem.recentCorrectTimes ?? []);
+  return average(getMasteryCorrectTimes(progressItem));
 }
 
 export function getMasteryCorrectTimes(progressItem) {
+  if (progressItem.mistakes === 0) {
+    return clampRecentCorrectTimes(progressItem.recentTimes ?? []);
+  }
+
   return progressItem.recentCorrectTimes ?? [];
 }
 
@@ -230,7 +234,9 @@ export function mergeProgress(
     const existing = savedProgress[problem.key];
     const recentTimes = clampHistory(existing?.recentTimes || existing?.last5Times || []);
     const responseTimes = existing?.responseTimes || recentTimes;
-    const recentCorrectTimes = clampRecentCorrectTimes(existing?.recentCorrectTimes || []);
+    const recentCorrectTimes = clampRecentCorrectTimes(
+      existing?.recentCorrectTimes || (existing?.mistakes === 0 ? recentTimes : []),
+    );
     const hydrated = {
       ...getDefaultProgress(problem),
       ...existing,
