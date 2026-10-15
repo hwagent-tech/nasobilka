@@ -425,6 +425,29 @@ button {
 .bottom-nav button.active { background: #102033; color: white; }
 .nav-icon { font-size: 1.55rem; line-height: 1; }
 
+.celebration { position: fixed; z-index: 30; inset: 0; overflow: hidden; pointer-events: none; }
+.celebration-message { position: absolute; z-index: 2; top: 24%; left: 50%; display: grid; place-items: center; gap: 5px; min-width: 220px; padding: 18px 24px; border: 2px solid rgba(255,255,255,.9); border-radius: 24px; background: rgba(16,32,51,.92); color: white; box-shadow: 0 18px 55px rgba(16,32,51,.3); transform: translateX(-50%); animation: celebration-pop 2.2s ease both; }
+.celebration-message span { font-size: 3rem; }
+.celebration-message strong { font-size: 1.2rem; }
+.confetti { --x: 50vw; --delay: 0s; --spin: 540deg; --color: #ffb23f; position: absolute; bottom: 18%; left: 50%; width: 10px; height: 18px; border-radius: 3px; background: var(--color); opacity: 0; animation: confetti-shot 1.65s cubic-bezier(.12,.65,.3,1) var(--delay) both; }
+
+@keyframes celebration-pop {
+  0% { opacity: 0; transform: translateX(-50%) scale(.5); }
+  12%, 72% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(.9); }
+}
+
+@keyframes confetti-shot {
+  0% { opacity: 1; transform: translate(-50%, 0) rotate(0); }
+  55% { opacity: 1; transform: translate(calc(var(--x) - 50vw), -68vh) rotate(var(--spin)); }
+  100% { opacity: 0; transform: translate(calc(var(--x) - 50vw), -48vh) rotate(var(--spin)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  .celebration-message { animation-duration: .8s; }
+}
+
 .game-screen { display: grid; place-items: center; min-height: calc(100dvh - 150px); }
 .game-card { width: 100%; padding: 34px 24px; border: 1px solid rgba(16, 32, 51, .08); border-radius: 28px; background: rgba(255, 255, 255, .82); box-shadow: 0 18px 45px rgba(37, 64, 97, .12); text-align: center; }
 .game-emoji { font-size: 3rem; }

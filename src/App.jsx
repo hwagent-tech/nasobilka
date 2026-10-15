@@ -27,6 +27,71 @@ import {
 
 const allProblems = generateAllProblems();
 
+const STREAK_MILESTONES = [
+  { count: 3, label: 'První plamínek!', icon: '🔥' },
+  { count: 5, label: 'Bronzová hvězda!', icon: '⭐' },
+  { count: 10, label: 'Stříbrná hvězda!', icon: '🌟' },
+  { count: 15, label: 'Zlatá koruna!', icon: '👑' },
+  { count: 20, label: 'Duhový mistr!', icon: '🏆' },
+  { count: 30, label: 'Mistr násobilky!', icon: '🥇' },
+  { count: 40, label: 'Matematická legenda!', icon: '🚀' },
+  { count: 50, label: 'Nepřekonatelná série!', icon: '💎' },
+];
+
+function getMilestone(streak) {
+  return STREAK_MILESTONES.find((milestone) => milestone.count === streak) ?? null;
+}
+
+function playCelebrationTone(streak) {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  const context = new AudioContext();
+  const notes = streak >= 10 ? [523.25, 659.25, 783.99, 1046.5] : [523.25, 659.25, 783.99];
+  const start = context.currentTime;
+
+  notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const noteStart = start + index * 0.11;
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.16, noteStart + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.32);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + 0.34);
+  });
+
+  window.setTimeout(() => context.close(), 1000);
+}
+
+function Celebration({ milestone }) {
+  if (!milestone) return null;
+
+  return (
+    <div className="celebration" aria-live="polite">
+      <div className="celebration-message">
+        <span>{milestone.icon}</span>
+        <strong>{milestone.label}</strong>
+      </div>
+      {Array.from({ length: 32 }, (_, index) => (
+        <i
+          key={index}
+          className="confetti"
+          style={{
+            '--x': `${8 + ((index * 37) % 84)}vw`,
+            '--delay': `${(index % 8) * 0.035}s`,
+            '--spin': `${360 + (index % 5) * 120}deg`,
+            '--color': ['#ffb23f', '#4aa8ff', '#ff5e78', '#55c98b', '#a77cf4'][index % 5],
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function buildNextRound(settings, progress, reviewQueue, recentProblemKeys) {
   const availableProblems = getAvailableProblems(allProblems, settings, progress);
   const nextProblem = pickAdaptiveProblem(
@@ -60,6 +125,7 @@ export default function App() {
   const [seriesCorrect, setSeriesCorrect] = useState(0);
   const [seriesTotal, setSeriesTotal] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [celebration, setCelebration] = useState(null);
   const [sortBy, setSortBy] = useState('numbers');
   const [filterTable, setFilterTable] = useState('all');
   const [filterMastery, setFilterMastery] = useState('all');
@@ -80,6 +146,8 @@ export default function App() {
   const reviewQueueRef = useRef({});
   const recentProblemKeysRef = useRef([]);
   const currentRoundHadMistake = useRef(false);
+  const streakRef = useRef(0);
+  const celebrationTimeout = useRef(null);
 
   useEffect(() => {
     saveState({ settings, progress });
@@ -101,6 +169,9 @@ export default function App() {
     () => () => {
       if (nextRoundTimeout.current) {
         window.clearTimeout(nextRoundTimeout.current);
+      }
+      if (celebrationTimeout.current) {
+        window.clearTimeout(celebrationTimeout.current);
       }
     },
     [],
@@ -215,9 +286,20 @@ export default function App() {
     setSeriesTotal((count) => count + 1);
     if (currentRoundHadMistake.current) {
       setStreak(0);
+      streakRef.current = 0;
     } else {
       setSeriesCorrect((count) => count + 1);
-      setStreak((count) => count + 1);
+      const nextStreak = streakRef.current + 1;
+      const milestone = getMilestone(nextStreak);
+      streakRef.current = nextStreak;
+      setStreak(nextStreak);
+
+      if (milestone) {
+        playCelebrationTone(nextStreak);
+        setCelebration(milestone);
+        if (celebrationTimeout.current) window.clearTimeout(celebrationTimeout.current);
+        celebrationTimeout.current = window.setTimeout(() => setCelebration(null), 2300);
+      }
     }
     setFeedback({
       status: 'correct',
@@ -417,6 +499,7 @@ export default function App() {
           </button>
         ))}
       </nav>
+      <Celebration milestone={celebration} />
     </div>
   );
 }
