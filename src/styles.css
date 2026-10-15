@@ -54,6 +54,8 @@ button {
 .session-title { color: #446687; font-size: .9rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .streak-score { justify-content: flex-end; }
 .streak-score strong { font-size: 1.25rem; }
+.parrot-header-stat { display: inline-flex; align-items: center; gap: 3px; padding: 5px 7px; border-radius: 12px; background: rgba(255,255,255,.72); }
+.parrot-header-stat b, .parrot-header-stat strong { font-size: 1rem; }
 .streak-icon { display: inline-grid; place-items: center; min-width: 1.6rem; font-size: 1.35rem; }
 .streak-icon.pending { color: #a9b5c1; font-size: 1rem; font-weight: 800; }
 .streak-heart { display: inline-grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 50%; font-size: 1.15rem; line-height: 1; transition: transform .2s ease, color .2s ease, background .2s ease; }
@@ -487,6 +489,94 @@ button {
 .game-question { margin: 30px 0; font-size: clamp(3.5rem, 15vw, 6rem); font-weight: 800; line-height: 1; }
 .game-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .game-answers button { min-height: 72px; border: 1px solid rgba(16, 32, 51, .08); border-radius: 18px; background: #fff; color: #102033; font-size: 1.7rem; font-weight: 800; box-shadow: 0 8px 20px rgba(20, 42, 67, .07); }
+
+.cage-screen { padding-bottom: 20px; }
+.cage-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+.cage-header div { display: grid; place-items: center; padding: 12px 8px; border-radius: 18px; background: rgba(255,255,255,.82); box-shadow: 0 8px 24px rgba(37,64,97,.08); }
+.cage-header span { font-size: 1.45rem; }
+.cage-header strong { font-size: 1.3rem; }
+.cage-header small { color: #70869d; }
+.cage-intro { margin-bottom: 18px; text-align: center; }
+.cage-intro h2 { margin: 0 0 5px; }
+.cage-intro p { margin: 0; color: #66809d; }
+.cage-intro small { display: block; margin-top: 6px; color: #527394; font-weight: 800; }
+.cage-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; padding: 5px; border-radius: 16px; background: rgba(255,255,255,.7); }
+.cage-tabs button { padding: 10px; border: 0; border-radius: 12px; background: transparent; color: #5f7892; font-weight: 800; }
+.cage-tabs button.active { background: #102033; color: white; }
+.parrot-habitat { position: relative; min-height: 440px; overflow: hidden; border: 1px solid rgba(46,94,145,.12); border-radius: 30px; background: linear-gradient(180deg, #dff4ff 0%, #f1fbf3 66%, #d4edc2 100%); box-shadow: inset 0 -25px 50px rgba(66,139,82,.12), 0 16px 40px rgba(37,64,97,.1); }
+.habitat-sun { position: absolute; top: 22px; right: 28px; color: #ffc34d; font-size: 3rem; filter: drop-shadow(0 5px 8px rgba(255,183,40,.25)); }
+.habitat-branch { position: absolute; height: 10px; border-radius: 999px; background: #94613d; box-shadow: 0 5px 0 #73472d; transform: rotate(-3deg); }
+.habitat-decoration { position: absolute; z-index: 1; font-size: 2.5rem; filter: drop-shadow(0 5px 5px rgba(37,64,97,.15)); }
+.decoration-0 { left: 8%; bottom: 6%; }
+.decoration-1 { right: 8%; bottom: 5%; }
+.decoration-2 { left: 44%; bottom: 3%; }
+.decoration-3 { left: 48%; top: 8%; }
+.decoration-4 { right: 26%; top: 3%; }
+.branch-one { top: 42%; left: 3%; width: 55%; }
+.branch-two { top: 76%; right: -4%; width: 62%; transform: rotate(4deg); }
+.free-parrot { position: absolute; z-index: 2; top: var(--parrot-top); left: var(--parrot-left); display: grid; place-items: center; min-width: 92px; padding: 0; border: 0; background: transparent; color: #102033; transform: translate(-50%, -50%); animation: free-parrot-hop 3.2s ease-in-out var(--hop-delay) infinite; }
+.parrot-egg { position: absolute; z-index: 3; top: var(--parrot-top); left: var(--parrot-left); display: grid; place-items: center; gap: 2px; padding: 5px; border: 0; background: transparent; color: #526f8a; transform: translate(-50%,-50%); }
+.speckled-egg { width: 70px; height: 88px; overflow: visible; filter: drop-shadow(0 8px 5px rgba(37,64,97,.18)); transform-origin: bottom center; }
+.egg-shell { stroke: color-mix(in srgb, var(--egg-accent) 35%, #8c897a); stroke-width: 2; }
+.egg-spots { fill: var(--egg-accent); opacity: .72; }
+.parrot-egg small { padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.88); font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.parrot-egg.hatching .speckled-egg { animation: egg-hatch 1.05s ease-in-out both; }
+.parrot-egg.hatching small { color: #d27b23; }
+.free-parrot:disabled { cursor: default; opacity: 1; }
+.free-parrot.hungry .parrot-avatar { filter: grayscale(1) saturate(0) opacity(.58); }
+.free-parrot.fed .parrot-avatar { filter: none; transition: filter .45s ease; }
+.parrot-avatar { display: grid; place-items: center; width: 86px; height: 96px; transform-origin: bottom center; }
+.parrot-avatar svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 7px 5px rgba(25,55,48,.18)); }
+.parrot-tail { fill: #315c50; }
+.parrot-wing { fill: rgba(22,76,64,.34); transform-origin: 52px 58px; }
+.parrot-face { fill: #fff4d9; }
+.parrot-beak { fill: #efa33a; }
+.parrot-feet { fill: none; stroke: #6d5138; stroke-width: 3; stroke-linecap: round; }
+.parrot-avatar.small { scale: .86; }
+.parrot-avatar.large { scale: 1.1; }
+.parrot-name { max-width: 110px; margin-top: -2px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.84); font-size: .7rem; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 12px rgba(37,64,97,.08); }
+.feed-price { position: absolute; top: -4px; right: 2px; display: grid; place-items: center; min-width: 36px; height: 30px; padding: 0 7px; border-radius: 999px; background: white; color: #b77b20; font-size: .72rem; font-weight: 800; box-shadow: 0 5px 14px rgba(37,64,97,.15); }
+.grain-pour { position: absolute; z-index: 3; top: -12px; right: 8px; color: #d59a31; opacity: 0; }
+.free-parrot.celebrating { animation-play-state: paused; }
+.free-parrot.celebrating .grain-pour { animation: grain-pour .75s ease both; }
+.free-parrot.celebrating .parrot-avatar { animation: parrot-flap .25s ease-in-out 3; }
+.free-parrot.celebrating .parrot-wing.left { animation: wing-left .16s ease-in-out 5 alternate; }
+.free-parrot.celebrating .parrot-wing.right { animation: wing-right .16s ease-in-out 5 alternate; }
+.empty-cage { padding: 40px 20px; border-radius: 24px; background: rgba(255,255,255,.75); text-align: center; }
+.empty-cage span { font-size: 4rem; }
+.empty-cage h3 { margin: 8px 0; }
+.empty-cage p { margin: 0; color: #66809d; }
+.next-parrot { margin-top: 16px; padding: 14px; border-radius: 16px; background: #edf5ff; color: #315b85; text-align: center; }
+.parrot-collection { display: grid; gap: 10px; }
+.parrot-collection article { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 19px; background: rgba(255,255,255,.84); box-shadow: 0 8px 22px rgba(37,64,97,.08); }
+.parrot-collection .parrot-avatar { width: 62px; height: 68px; }
+.parrot-collection article div { display: grid; }
+.parrot-collection article small { color: #71869b; }
+.parrot-collection article button { padding: 9px 11px; border: 0; border-radius: 12px; background: #e8f2ff; color: #1b4f85; font-size: .75rem; font-weight: 800; }
+.parrot-collection article button:disabled { color: #9aa8b5; background: #edf0f2; }
+.daily-gift-button { display: grid; place-items: center; width: 100%; gap: 3px; margin-top: 14px; padding: 17px; border: 2px solid #f3c05b; border-radius: 20px; background: linear-gradient(135deg,#fff7d8,#ffe8a3); color: #6e4a0a; }
+.daily-gift-button span { font-size: 2.2rem; }
+.daily-gift-button small { color: #8b671e; }
+.gift-reveal { position: fixed; z-index: 45; inset: 50% auto auto 50%; display: grid; place-items: center; gap: 8px; width: min(calc(100% - 36px),340px); padding: 28px; border-radius: 28px; background: white; box-shadow: 0 22px 80px rgba(16,32,51,.35); text-align: center; transform: translate(-50%,-50%); animation: celebration-pop .7s ease both; }
+.gift-reveal > span { font-size: 4rem; }
+.gift-reveal > strong { font-size: 1.35rem; }
+.gift-reveal small { color: #66809d; }
+.gift-reveal button { margin-top: 8px; padding: 11px 25px; border: 0; border-radius: 13px; background: #102033; color: white; font-weight: 800; }
+.rename-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(16,32,51,.38); backdrop-filter: blur(4px); }
+.rename-dialog { display: grid; gap: 14px; width: min(100%, 340px); padding: 24px; border-radius: 26px; background: white; box-shadow: 0 22px 70px rgba(16,32,51,.3); text-align: center; }
+.rename-bird { display: grid; place-items: center; height: 86px; }
+.rename-dialog h3 { margin: 0; }
+.rename-dialog input { width: 100%; padding: 13px 14px; border: 2px solid #dbe6ef; border-radius: 14px; text-align: center; font-size: 1.1rem; font-weight: 800; }
+.rename-dialog div:last-child { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rename-dialog button { padding: 11px; border: 0; border-radius: 13px; background: #e8f2ff; color: #1b4f85; font-weight: 800; }
+.rename-dialog button[type="submit"] { background: #102033; color: white; }
+
+@keyframes grain-pour { 0% { opacity: 0; transform: translateY(-12px); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-35px, 65px); } }
+@keyframes parrot-flap { 0%,100% { transform: rotate(0) scale(1); } 50% { transform: rotate(-8deg) scale(1.12); } }
+@keyframes wing-left { to { transform: rotate(24deg) translateX(-5px); } }
+@keyframes wing-right { to { transform: rotate(-24deg) translateX(5px); } }
+@keyframes free-parrot-hop { 0%, 82%, 100% { transform: translate(-50%, -50%) translateY(0) rotate(0); } 88% { transform: translate(-50%, -50%) translateY(-13px) rotate(-4deg); } 94% { transform: translate(-50%, -50%) translateY(0) rotate(3deg); } }
+@keyframes egg-hatch { 0%,100% { transform: rotate(0) translateY(0) scale(1); } 12% { transform: rotate(-9deg); } 24% { transform: rotate(10deg) translateY(-5px); } 36% { transform: rotate(-12deg); } 48% { transform: rotate(12deg) translateY(-9px); } 62% { transform: rotate(-8deg); } 78% { transform: rotate(7deg) scale(1.08); } 100% { opacity: 0; transform: translateY(-20px) scale(1.35); } }
 
 @media (max-width: 920px) {
   .hero,

@@ -3,7 +3,8 @@ import AnswerButtons from './components/AnswerButtons';
 import Question from './components/Question';
 import Settings from './components/Settings';
 import Stats from './components/Stats';
-import MiniGame from './components/MiniGame';
+import ParrotCage from './components/ParrotCage';
+import { claimDailyGift, feedParrot, getParrotSummary, hatchParrot, loadParrotState, renameParrot, rewardCorrectAnswer, saveParrotState, toggleParrotInCage } from './parrots';
 import {
   DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
   MAX_TABLE,
@@ -127,6 +128,7 @@ export default function App() {
   const initialState = useMemo(() => loadState(allProblems), []);
   const [settings, setSettings] = useState(initialState.settings);
   const [progress, setProgress] = useState(initialState.progress);
+  const [parrotState, setParrotState] = useState(() => loadParrotState());
   const [view, setView] = useState('practice');
   const [seriesCorrect, setSeriesCorrect] = useState(0);
   const [seriesTotal, setSeriesTotal] = useState(0);
@@ -161,6 +163,10 @@ export default function App() {
   useEffect(() => {
     saveState({ settings, progress });
   }, [settings, progress]);
+
+  useEffect(() => {
+    saveParrotState(parrotState);
+  }, [parrotState]);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -236,6 +242,7 @@ export default function App() {
   const progressPercent = totalExamples
     ? Math.round((progressMasteredCount / totalExamples) * 100)
     : 0;
+  const parrotSummary = getParrotSummary(parrotState);
 
   function advanceToNextRound(nextProgress, nextReviewQueue, nextRecentProblemKeys) {
     const nextRound = buildNextRound(settings, nextProgress, nextReviewQueue, nextRecentProblemKeys);
@@ -312,6 +319,7 @@ export default function App() {
     }
 
     setQuestionResolved(true);
+    setParrotState((current) => rewardCorrectAnswer(current));
     setSeriesTotal((count) => count + 1);
     if (currentRoundHadMistake.current) {
       if (!currentRoundProtected.current) {
@@ -321,16 +329,8 @@ export default function App() {
     } else {
       setSeriesCorrect((count) => count + 1);
       const nextStreak = streakRef.current + 1;
-      const milestone = getMilestone(nextStreak);
       streakRef.current = nextStreak;
       setStreak(nextStreak);
-
-      if (milestone) {
-        playCelebrationTone(nextStreak);
-        setCelebration(milestone);
-        if (celebrationTimeout.current) window.clearTimeout(celebrationTimeout.current);
-        celebrationTimeout.current = window.setTimeout(() => setCelebration(null), 2300);
-      }
     }
     setFeedback({
       status: 'correct',
@@ -426,22 +426,10 @@ export default function App() {
             <strong>{seriesCorrect} / {seriesTotal}</strong>
             <span>správně</span>
           </div>
-          <div className="session-title">Násobilka</div>
+          <div className="session-title">Nakrmit {parrotSummary.hungryCount}</div>
           <div className="streak-score">
-            <span
-              className={`streak-icon ${streak < 5 ? 'pending' : ''}`}
-              aria-hidden="true"
-            >
-              {getStreakIcon(streak)}
-            </span>
-            <strong>{streak}</strong>
-            <span
-              className={`streak-heart ${heartAvailable ? 'available' : 'used'}`}
-              aria-label={heartAvailable ? 'Záchranné srdíčko je k dispozici' : 'Záchranné srdíčko je spotřebované'}
-            >
-              {heartAvailable ? '♥' : '♡'}
-            </span>
-            <small>série</small>
+            <span className="parrot-header-stat"><b>🌾</b><strong>{parrotState.grain}</strong></span>
+            <span className="parrot-header-stat"><b>🦜</b><strong>{parrotSummary.hungryCount}</strong></span>
           </div>
         </header>
       )}
@@ -491,8 +479,15 @@ export default function App() {
             onSortChange={setSortBy}
           />
         </main>
-      ) : view === 'game' ? (
-        <MiniGame />
+      ) : view === 'cage' ? (
+        <ParrotCage
+          state={parrotState}
+          onFeed={(parrotId) => setParrotState((current) => feedParrot(current, parrotId))}
+          onRename={(parrotId, name) => setParrotState((current) => renameParrot(current, parrotId, name))}
+          onToggleCage={(parrotId) => setParrotState((current) => toggleParrotInCage(current, parrotId))}
+          onClaimGift={() => setParrotState((current) => claimDailyGift(current))}
+          onHatch={(parrotId) => setParrotState((current) => hatchParrot(current, parrotId))}
+        />
       ) : (
         <main className="content-single">
           <Settings
@@ -532,7 +527,7 @@ export default function App() {
         {[
           ['practice', '⌂', 'Počítání'],
           ['stats', '▥', 'Statistiky'],
-          ['game', '★', 'Minihra'],
+          ['cage', '🦜', 'Klec'],
           ['settings', '⚙', 'Nastavení'],
         ].map(([target, icon, label]) => (
           <button
@@ -547,7 +542,6 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <Celebration milestone={celebration} />
     </div>
   );
 }
