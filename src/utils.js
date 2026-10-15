@@ -364,12 +364,16 @@ export function getVisibleProblems(allProblems, settings, progressMap) {
   );
 }
 
-function getProblemBucket(progressItem) {
-  const hasMistakes = progressItem.mistakes > 0;
-  const hasWrongHistory = progressItem.totalAttempts > progressItem.correctCount;
+function getProblemBucket(progressItem, masteryTimeLimit) {
   const isNew = progressItem.totalAttempts === 0;
 
-  if (hasMistakes || hasWrongHistory) {
+  if (isMastered(progressItem, masteryTimeLimit)) {
+    return 'low';
+  }
+
+  // Chybný příklad má vysokou prioritu jen do tří následných správných odpovědí.
+  // Historická chyba tak dítě nepronásleduje navždy.
+  if (progressItem.mistakes > 0 && (progressItem.recentCorrectTimes?.length ?? 0) < 3) {
     return 'high';
   }
 
@@ -389,7 +393,7 @@ function getProblemWeight(problem, progressItem, reviewQueue, masteryTimeLimit) 
     weight += 14;
   }
 
-  switch (getProblemBucket(progressItem)) {
+  switch (getProblemBucket(progressItem, masteryTimeLimit)) {
     case 'high':
       weight += 10;
       break;

@@ -3,6 +3,7 @@ import AnswerButtons from './components/AnswerButtons';
 import Question from './components/Question';
 import Settings from './components/Settings';
 import Stats from './components/Stats';
+import MiniGame from './components/MiniGame';
 import {
   DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
   MAX_TABLE,
@@ -15,7 +16,6 @@ import {
   getPracticeMaxFactor,
   getVisibleProblems,
   isProgressMastered,
-  isMastered,
   loadState,
   mergeProgress,
   normalizeMasteryTimeLimitSeconds,
@@ -57,6 +57,9 @@ export default function App() {
   const [settings, setSettings] = useState(initialState.settings);
   const [progress, setProgress] = useState(initialState.progress);
   const [view, setView] = useState('practice');
+  const [seriesCorrect, setSeriesCorrect] = useState(0);
+  const [seriesTotal, setSeriesTotal] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [sortBy, setSortBy] = useState('numbers');
   const [filterTable, setFilterTable] = useState('all');
   const [filterMastery, setFilterMastery] = useState('all');
@@ -76,6 +79,7 @@ export default function App() {
   const progressRef = useRef(initialState.progress);
   const reviewQueueRef = useRef({});
   const recentProblemKeysRef = useRef([]);
+  const currentRoundHadMistake = useRef(false);
 
   useEffect(() => {
     saveState({ settings, progress });
@@ -115,6 +119,7 @@ export default function App() {
     );
     setRound(nextRound);
     setWrongAnswers([]);
+    currentRoundHadMistake.current = false;
     setQuestionResolved(false);
     setFeedback({
       status: '',
@@ -155,6 +160,7 @@ export default function App() {
     const nextRound = buildNextRound(settings, nextProgress, nextReviewQueue, nextRecentProblemKeys);
     setRound(nextRound);
     setWrongAnswers([]);
+    currentRoundHadMistake.current = false;
     setQuestionResolved(false);
     setFeedback({
       status: '',
@@ -172,6 +178,7 @@ export default function App() {
     const elapsed = Date.now() - questionStartedAt.current;
 
     if (!isCorrect) {
+      currentRoundHadMistake.current = true;
       setWrongAnswers((currentWrongAnswers) =>
         currentWrongAnswers.includes(answer)
           ? currentWrongAnswers
@@ -205,6 +212,13 @@ export default function App() {
     }
 
     setQuestionResolved(true);
+    setSeriesTotal((count) => count + 1);
+    if (currentRoundHadMistake.current) {
+      setStreak(0);
+    } else {
+      setSeriesCorrect((count) => count + 1);
+      setStreak((count) => count + 1);
+    }
     setFeedback({
       status: 'correct',
       message: 'Správně',
@@ -291,61 +305,22 @@ export default function App() {
     questionStartedAt.current = Date.now();
   }
 
-  const practicedCount = statsRows.filter((row) => row.totalAttempts > 0).length;
-  const masteredCount = statsRows.filter((row) =>
-    isMastered(row, masteryTimeLimitSeconds),
-  ).length;
-
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div>
-          <div className="eyebrow">Adaptivní trenér násobilky</div>
-        </div>
-
-        <div className="hero-stats">
-          <div className="stat-card">
-            <span>Procvičeno</span>
-            <strong>{practicedCount}</strong>
+      {view === 'practice' && (
+        <header className="session-header">
+          <div className="session-score">
+            <strong>{seriesCorrect} / {seriesTotal}</strong>
+            <span>správně</span>
           </div>
-          <div className="stat-card">
-            <span>Zvládnuto</span>
-            <strong>
-              {progressMasteredCount} / {totalExamples}
-            </strong>
-            <small>{progressPercent}% hotovo</small>
+          <div className="session-title">Násobilka</div>
+          <div className="streak-score">
+            <span aria-hidden="true">🔥</span>
+            <strong>{streak}</strong>
+            <small>série</small>
           </div>
-          <div className="stat-card">
-            <span>Násobilky</span>
-            <strong>{settings.selectedTables.length}/{MAX_TABLE}</strong>
-            <small>Adaptivně: {masteredCount}</small>
-          </div>
-        </div>
-      </header>
-
-      <nav className="view-switch">
-        <button
-          type="button"
-          className={view === 'practice' ? 'active' : ''}
-          onClick={() => setView('practice')}
-        >
-          Procvičování
-        </button>
-        <button
-          type="button"
-          className={view === 'stats' ? 'active' : ''}
-          onClick={() => setView('stats')}
-        >
-          Statistiky
-        </button>
-        <button
-          type="button"
-          className={view === 'settings' ? 'active' : ''}
-          onClick={() => setView('settings')}
-        >
-          Nastavení
-        </button>
-      </nav>
+        </header>
+      )}
 
       {view === 'practice' ? (
         <main className="content-single">
@@ -386,6 +361,8 @@ export default function App() {
             onSortChange={setSortBy}
           />
         </main>
+      ) : view === 'game' ? (
+        <MiniGame />
       ) : (
         <main className="content-single">
           <Settings
@@ -420,6 +397,26 @@ export default function App() {
           />
         </main>
       )}
+
+      <nav className="bottom-nav" aria-label="Hlavní navigace">
+        {[
+          ['practice', '⌂', 'Počítání'],
+          ['stats', '▥', 'Statistiky'],
+          ['game', '★', 'Minihra'],
+          ['settings', '⚙', 'Nastavení'],
+        ].map(([target, icon, label]) => (
+          <button
+            key={target}
+            type="button"
+            className={view === target ? 'active' : ''}
+            onClick={() => setView(target)}
+            aria-current={view === target ? 'page' : undefined}
+          >
+            <span className="nav-icon" aria-hidden="true">{icon}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
