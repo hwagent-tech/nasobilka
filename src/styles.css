@@ -54,6 +54,17 @@ button {
 .session-title { color: #446687; font-size: .9rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .streak-score { justify-content: flex-end; }
 .streak-score strong { font-size: 1.25rem; }
+.streak-icon { display: inline-grid; place-items: center; min-width: 1.6rem; font-size: 1.35rem; }
+.streak-heart { display: inline-grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 50%; font-size: 1.15rem; line-height: 1; transition: transform .2s ease, color .2s ease, background .2s ease; }
+.streak-heart.available { background: #ffe5e8; color: #e5485d; animation: heart-beat 1.8s ease-in-out infinite; }
+.streak-heart.used { background: rgba(16,32,51,.07); color: #91a0af; }
+
+@keyframes heart-beat {
+  0%, 78%, 100% { transform: scale(1); }
+  84% { transform: scale(1.14); }
+  90% { transform: scale(1); }
+  95% { transform: scale(1.09); }
+}
 
 .hero {
   display: grid;

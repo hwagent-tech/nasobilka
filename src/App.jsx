@@ -28,11 +28,11 @@ import {
 const allProblems = generateAllProblems();
 
 const STREAK_MILESTONES = [
-  { count: 3, label: 'První plamínek!', icon: '🔥' },
-  { count: 5, label: 'Bronzová hvězda!', icon: '⭐' },
+  { count: 5, label: 'První plamínek!', icon: '🔥' },
   { count: 10, label: 'Stříbrná hvězda!', icon: '🌟' },
   { count: 15, label: 'Zlatá koruna!', icon: '👑' },
   { count: 20, label: 'Duhový mistr!', icon: '🏆' },
+  { count: 25, label: 'Super série!', icon: '⭐' },
   { count: 30, label: 'Mistr násobilky!', icon: '🥇' },
   { count: 40, label: 'Matematická legenda!', icon: '🚀' },
   { count: 50, label: 'Nepřekonatelná série!', icon: '💎' },
@@ -40,6 +40,12 @@ const STREAK_MILESTONES = [
 
 function getMilestone(streak) {
   return STREAK_MILESTONES.find((milestone) => milestone.count === streak) ?? null;
+}
+
+function getStreakIcon(streak) {
+  return [...STREAK_MILESTONES]
+    .reverse()
+    .find((milestone) => streak >= milestone.count)?.icon ?? '🔥';
 }
 
 function playCelebrationTone(streak) {
@@ -125,6 +131,7 @@ export default function App() {
   const [seriesCorrect, setSeriesCorrect] = useState(0);
   const [seriesTotal, setSeriesTotal] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [heartAvailable, setHeartAvailable] = useState(true);
   const [celebration, setCelebration] = useState(null);
   const [sortBy, setSortBy] = useState('numbers');
   const [filterTable, setFilterTable] = useState('all');
@@ -146,7 +153,9 @@ export default function App() {
   const reviewQueueRef = useRef({});
   const recentProblemKeysRef = useRef([]);
   const currentRoundHadMistake = useRef(false);
+  const currentRoundProtected = useRef(false);
   const streakRef = useRef(0);
+  const heartAvailableRef = useRef(true);
   const celebrationTimeout = useRef(null);
 
   useEffect(() => {
@@ -191,6 +200,7 @@ export default function App() {
     setRound(nextRound);
     setWrongAnswers([]);
     currentRoundHadMistake.current = false;
+    currentRoundProtected.current = false;
     setQuestionResolved(false);
     setFeedback({
       status: '',
@@ -232,6 +242,7 @@ export default function App() {
     setRound(nextRound);
     setWrongAnswers([]);
     currentRoundHadMistake.current = false;
+    currentRoundProtected.current = false;
     setQuestionResolved(false);
     setFeedback({
       status: '',
@@ -249,16 +260,34 @@ export default function App() {
     const elapsed = Date.now() - questionStartedAt.current;
 
     if (!isCorrect) {
+      if (!currentRoundHadMistake.current) {
+        if (heartAvailableRef.current && streakRef.current > 0) {
+          heartAvailableRef.current = false;
+          currentRoundProtected.current = true;
+          setHeartAvailable(false);
+          setFeedback({
+            status: 'wrong',
+            message: 'Srdíčko zachránilo tvoji sérii. Zkus to znovu.',
+          });
+        } else {
+          streakRef.current = 0;
+          setStreak(0);
+          heartAvailableRef.current = true;
+          setHeartAvailable(true);
+        }
+      }
       currentRoundHadMistake.current = true;
       setWrongAnswers((currentWrongAnswers) =>
         currentWrongAnswers.includes(answer)
           ? currentWrongAnswers
           : [...currentWrongAnswers, answer],
       );
-      setFeedback({
-        status: 'wrong',
-        message: 'Špatně. Zkus najít správnou odpověď.',
-      });
+      if (!currentRoundProtected.current) {
+        setFeedback({
+          status: 'wrong',
+          message: 'Špatně. Zkus najít správnou odpověď.',
+        });
+      }
 
       const nextProgress = {
         ...progressRef.current,
@@ -285,8 +314,10 @@ export default function App() {
     setQuestionResolved(true);
     setSeriesTotal((count) => count + 1);
     if (currentRoundHadMistake.current) {
-      setStreak(0);
-      streakRef.current = 0;
+      if (!currentRoundProtected.current) {
+        setStreak(0);
+        streakRef.current = 0;
+      }
     } else {
       setSeriesCorrect((count) => count + 1);
       const nextStreak = streakRef.current + 1;
@@ -397,8 +428,14 @@ export default function App() {
           </div>
           <div className="session-title">Násobilka</div>
           <div className="streak-score">
-            <span aria-hidden="true">🔥</span>
+            <span className="streak-icon" aria-hidden="true">{getStreakIcon(streak)}</span>
             <strong>{streak}</strong>
+            <span
+              className={`streak-heart ${heartAvailable ? 'available' : 'used'}`}
+              aria-label={heartAvailable ? 'Záchranné srdíčko je k dispozici' : 'Záchranné srdíčko je spotřebované'}
+            >
+              {heartAvailable ? '♥' : '♡'}
+            </span>
             <small>série</small>
           </div>
         </header>
