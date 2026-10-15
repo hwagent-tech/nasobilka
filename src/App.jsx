@@ -306,7 +306,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${view === 'practice' ? 'practice-view' : ''}`}>
       {view === 'practice' && (
         <header className="session-header">
           <div className="session-score">

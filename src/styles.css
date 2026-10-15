@@ -23,6 +23,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
+  overscroll-behavior-y: none;
 }
 
 button,
@@ -33,6 +34,7 @@ select {
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 #root {
@@ -455,6 +457,24 @@ button {
   .app-shell {
     min-height: 100dvh;
     padding: 10px 14px 98px;
+  }
+
+  .app-shell.practice-view {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .practice-view .content-single,
+  .practice-view .practice-panel {
+    min-height: 0;
+  }
+
+  .practice-view .answer-button {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .hero-stats,
