@@ -45,7 +45,7 @@ function getMilestone(streak) {
 function getStreakIcon(streak) {
   return [...STREAK_MILESTONES]
     .reverse()
-    .find((milestone) => streak >= milestone.count)?.icon ?? '🔥';
+    .find((milestone) => streak >= milestone.count)?.icon ?? '○';
 }
 
 function playCelebrationTone(streak) {
@@ -428,7 +428,12 @@ export default function App() {
           </div>
           <div className="session-title">Násobilka</div>
           <div className="streak-score">
-            <span className="streak-icon" aria-hidden="true">{getStreakIcon(streak)}</span>
+            <span
+              className={`streak-icon ${streak < 5 ? 'pending' : ''}`}
+              aria-hidden="true"
+            >
+              {getStreakIcon(streak)}
+            </span>
             <strong>{streak}</strong>
             <span
               className={`streak-heart ${heartAvailable ? 'available' : 'used'}`}
