@@ -451,7 +451,13 @@ export default function App() {
           <div className="practice-panel">
             {currentProblem ? (
               <>
-                <Question a={currentProblem.a} b={currentProblem.b} feedback={feedback} />
+                <Question
+                  a={currentProblem.a}
+                  b={currentProblem.b}
+                  feedback={feedback}
+                  problemKey={currentProblem.key}
+                  timeLimitSeconds={masteryTimeLimitSeconds}
+                />
                 <AnswerButtons
                   options={answerOptions}
                   correctAnswer={currentProblem.answer}

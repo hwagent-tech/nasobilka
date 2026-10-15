@@ -167,6 +167,17 @@ button {
   text-align: center;
 }
 
+.mastery-timer-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; color: #6a829b; font-size: .76rem; }
+.mastery-timer-label strong { color: #385a7b; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.mastery-timer { height: 6px; margin-bottom: 18px; overflow: hidden; border-radius: 999px; background: #e2eaf1; }
+.mastery-timer span { display: block; width: 100%; height: 100%; border-radius: inherit; background: #45b884; transform-origin: left center; animation-name: mastery-countdown; animation-timing-function: linear; animation-fill-mode: forwards; }
+
+@keyframes mastery-countdown {
+  0% { background: #45b884; transform: scaleX(1); }
+  65% { background: #f0ad3d; }
+  100% { background: #e05d62; transform: scaleX(0); }
+}
+
 .question-label {
   color: #5a7ca1;
   text-transform: uppercase;
@@ -523,6 +534,7 @@ button {
   .practice-panel { gap: 12px; }
   .question-card { display: grid; align-content: center; min-height: 31dvh; }
   .question-label { margin-bottom: 12px; }
+  .mastery-timer { margin-bottom: 12px; }
   .question-text { font-size: clamp(4rem, 21vw, 6rem); }
   .feedback { margin-top: 12px; min-height: 24px; }
   .answers-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -569,6 +581,8 @@ button {
   .session-header { min-height: 42px; }
   .question-card { min-height: 25dvh; padding: 14px; }
   .question-label { margin-bottom: 6px; }
+  .mastery-timer-label { margin-bottom: 4px; }
+  .mastery-timer { margin-bottom: 6px; }
   .feedback { margin-top: 8px; }
   .answer-button { min-height: 58px; }
   .bottom-nav button { min-height: 48px; }
