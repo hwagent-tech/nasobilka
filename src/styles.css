@@ -693,3 +693,11 @@ button {
   .answer-button { min-height: 58px; }
   .bottom-nav button { min-height: 48px; }
 }
+
+.drinking-drops { display: none; }
+.free-parrot.drinking .drinking-drops { display: block; position: absolute; top: 20%; right: 0; font-size: 1.5rem; }
+.free-parrot.drinking .parrot-avatar { animation: bird-drink .45s ease-in-out 3; }
+@keyframes bird-drink { 50% { transform: translateY(9px) rotate(18deg); } }
+.sound-collection label { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.sound-collection select { max-width: 100%; padding: .65rem; border-radius: .75rem; font: inherit; }
+@media (prefers-reduced-motion: reduce) { .free-parrot.drinking .parrot-avatar { animation: none; } }

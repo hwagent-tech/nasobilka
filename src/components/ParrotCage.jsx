@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CAGE_CAPACITY, DECORATIONS, PARROT_SOUNDS, getParrotDefinition, getParrotSummary, todayKey } from '../parrots';
+import { CAGE_CAPACITY, DECORATIONS, PARROT_SOUNDS, getParrotDefinition, getParrotSound, getParrotSummary, todayKey } from '../parrots';
 
 function chirp(soundId = 'budgie') {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -7,7 +7,7 @@ function chirp(soundId = 'budgie') {
   const context = new AudioContext();
   const calls = {
     budgie: [1200, 1500, 1320], cockatiel: [880, 1174, 988], lorikeet: [720, 940, 760, 1020],
-    amazon: [620, 520, 690], macaw: [330, 280, 390], bell: [1046, 1568], water: [900, 650, 1100],
+    amazon: [620, 520, 690], macaw: [330, 280, 390], morning: [784, 988, 1175, 1568, 1175, 988], forest: [1047, 784, 880, 1319, 1047, 784], lullaby: [659, 784, 988, 784, 659, 587, 523], bell: [1046, 1568], water: [900, 650, 1100],
   };
   (calls[soundId] ?? calls.budgie).forEach((frequency, index) => {
     const oscillator = context.createOscillator();
@@ -22,7 +22,7 @@ function chirp(soundId = 'budgie') {
     oscillator.start(start);
     oscillator.stop(start + 0.17);
   });
-  window.setTimeout(() => context.close(), 700);
+  window.setTimeout(() => context.close(), 1200);
 }
 
 function ParrotAvatar({ color, size }) {
@@ -78,6 +78,9 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
   const [showGift, setShowGift] = useState(false);
   const [hatching, setHatching] = useState(null);
   const [activeDecoration, setActiveDecoration] = useState(null);
+  const [drinking, setDrinking] = useState([]);
+  const [soundParrotId, setSoundParrotId] = useState(null);
+  const soundParrot = state.parrots.find((parrot) => parrot.id === soundParrotId) ?? state.parrots[0];
   const holdTimer = useRef(null);
   const longPressTriggered = useRef(false);
   const drag = useRef(null);
@@ -144,7 +147,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
     if (!parrot.fedToday && state.grain < parrot.feedCost) return;
     if (!parrot.fedToday) onFeed(parrot.id);
     setCelebrating(parrot.id);
-    chirp(state.selectedSound);
+    chirp(getParrotSound(state, parrot));
     window.setTimeout(() => setCelebrating(null), 1200);
   }
 
@@ -171,9 +174,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
 
       <div className="cage-intro">
         <h2>Moje papouščí klec</h2>
-        <p>Klepnutím nakrmíš papouška nebo rozezníš dárek. Papoušky i dárky můžeš přesouvat prstem.</p>
-        <small>Podržením papouška ho přejmenuješ. Po každých 4 správných odpovědích dostane jeden papoušek hlad.</small>
-        <small>{summary.hungryCount ? `Dnešní cíl: nakrmit ještě ${summary.hungryCount}` : 'Dnešní péče je hotová!'}</small>
+
       </div>
 
       <div className="cage-tabs">
@@ -188,7 +189,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
           <div className="habitat-branch branch-two" aria-hidden="true" />
           {state.decorations.map((decorationId, index) => {
             const decoration = DECORATIONS.find((item) => item.id === decorationId);
-            return decoration ? <button type="button" aria-label={decoration.name} key={decoration.id} {...moveHandlers(`gift-${decoration.id}`)} style={position(`gift-${decoration.id}`)} className={`habitat-decoration decoration-${index} gift-${decoration.id} ${activeDecoration === decoration.id ? 'active' : ''}`} onClick={() => { if (longPressTriggered.current) return; setActiveDecoration(decoration.id); chirp(decoration.id === 'bell' ? 'bell' : decoration.id === 'bath' ? 'water' : state.selectedSound); window.setTimeout(() => setActiveDecoration(null), 900); }}>{decoration.icon}</button> : null;
+            return decoration ? <button type="button" aria-label={decoration.name} key={decoration.id} {...moveHandlers(`gift-${decoration.id}`)} style={position(`gift-${decoration.id}`)} className={`habitat-decoration decoration-${index} gift-${decoration.id} ${activeDecoration === decoration.id ? 'active' : ''}`} onClick={() => { if (longPressTriggered.current) return; setActiveDecoration(decoration.id); chirp(decoration.id === 'bell' ? 'bell' : 'water'); if (decoration.id === 'bath') { setDrinking(state.parrots.filter((bird) => bird.active && bird.hatched).map((bird) => bird.id)); window.setTimeout(() => setDrinking([]), 1400); } window.setTimeout(() => setActiveDecoration(null), 900); }}>{decoration.icon}</button> : null;
           })}
           {state.parrots.filter((item) => item.active).map((owned, index) => {
             const parrot = getParrotDefinition(owned);
@@ -230,7 +231,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
               <button
                 key={parrot.id}
                 type="button"
-                className={`free-parrot ${owned.fedToday ? 'fed' : 'hungry'} ${celebrating === parrot.id ? 'celebrating' : ''}`}
+                className={`free-parrot ${owned.fedToday ? 'fed' : 'hungry'} ${celebrating === parrot.id ? 'celebrating' : ''} ${drinking.includes(parrot.id) ? 'drinking' : ''}`} 
                 style={positionStyle}
                 {...moveHandlers(`parrot-${parrot.id}`, { ...parrot, ...owned })}
                 onClick={() => {
@@ -239,6 +240,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
                 }}
                 aria-label={`${parrot.name}. ${owned.fedToday ? 'Nakrmený' : canFeed ? `Nasypat ${parrot.feedCost} zrní` : 'Hladový, chybí zrní'}`}
               >
+                <span className="drinking-drops" aria-hidden="true">💧</span>
                 <span className="grain-pour" aria-hidden="true">•••</span>
                 <ParrotAvatar color={parrot.color} size={parrot.size} />
                 <span className="parrot-name">{owned.nickname || parrot.name}</span>
@@ -267,11 +269,12 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
 
       {section === 'collection' && (
         <section className="sound-collection">
-          <h3>Hlasy papoušků</h3>
-          <p>Vyber zvuk, kterým budou papoušci odpovídat.</p>
+          <h3>Zpívání a melodie</h3>
+          {soundParrot && <label>Ptáček <select value={soundParrot.id} onChange={(event) => setSoundParrotId(event.target.value)}>{state.parrots.map((bird) => <option key={bird.id} value={bird.id}>{bird.nickname || getParrotDefinition(bird).name}</option>)}</select></label>}
+          <p>Každému ptáčkovi vyber vlastní zpívání. Nové melodie najdeš v dárcích.</p>
           <div>{PARROT_SOUNDS.map((sound) => {
             const unlocked = state.sounds.includes(sound.id);
-            return <button key={sound.id} type="button" disabled={!unlocked} className={state.selectedSound === sound.id ? 'active' : ''} onClick={() => { onSelectSound(sound.id); chirp(sound.id); }}><span>{unlocked ? '🔊' : '🔒'}</span>{sound.name}</button>;
+            return <button key={sound.id} type="button" disabled={!unlocked || !soundParrot} className={soundParrot && getParrotSound(state, soundParrot) === sound.id ? 'active' : ''} onClick={() => { onSelectSound(sound.id, soundParrot.id); chirp(sound.id); }}><span>{unlocked ? '🔊' : '🔒'}</span>{sound.name}</button>;
           })}</div>
         </section>
       )}
@@ -281,7 +284,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
       )}
 
       {showGift && state.giftClaimedOn === todayKey() && state.lastGift && (
-        <div className="gift-reveal"><span>{state.lastGift.icon}</span><strong>{state.lastGift.label}</strong><small>Denní péče splněna · den {state.careDays}</small><button type="button" onClick={() => setShowGift(false)}>Paráda!</button></div>
+        <div className="gift-reveal"><span>{state.lastGift.icon}</span><strong>{state.lastGift.label}</strong>{state.lastGift.type === 'sound' && <small>Melodii si vybereš ve sbírce.</small>}<small>Denní péče splněna · den {state.careDays}</small><button type="button" onClick={() => setShowGift(false)}>Paráda!</button></div>
       )}
 
       {summary.nextParrot && (

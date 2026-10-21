@@ -6,11 +6,14 @@ export const PARROT_SOUNDS = [
   { id: 'lorikeet', name: 'Volání loriho' },
   { id: 'amazon', name: 'Hlas amazoňana' },
   { id: 'macaw', name: 'Hluboké volání ary' },
+  { id: 'morning', name: 'Ranní písnička' },
+  { id: 'forest', name: 'Lesní melodie' },
+  { id: 'lullaby', name: 'Ptačí ukolébavka' },
 ];
 
 export const DECORATIONS = [
   { id: 'swing', name: 'Dřevěná houpačka', icon: '🪵' },
-  { id: 'bath', name: 'Ptačí koupátko', icon: '💧' },
+  { id: 'bath', name: 'Pítko pro ptáčky', icon: '💧' },
   { id: 'flowers', name: 'Barevné květiny', icon: '🌺' },
   { id: 'bell', name: 'Zlatý zvoneček', icon: '🔔' },
   { id: 'rainbow', name: 'Duha nad voliérou', icon: '🌈' },
@@ -38,7 +41,7 @@ export function todayKey() {
 }
 
 export function getDefaultParrotState() {
-  return { grain: 0, totalCorrect: 0, dailyCorrect: 0, parrots: [], decorations: [], sounds: ['budgie'], selectedSound: 'budgie', careDays: 0, activitySinceHunger: 0, giftClaimedOn: null, lastGift: null, lastVisitDay: todayKey() };
+  return { grain: 0, totalCorrect: 0, dailyCorrect: 0, parrots: [], decorations: [], sounds: PARROT_SOUNDS.slice(0, 5).map((sound) => sound.id), selectedSound: 'budgie', careDays: 0, activitySinceHunger: 0, giftClaimedOn: null, lastGift: null, lastVisitDay: todayKey() };
 }
 
 export function normalizeParrotState(state) {
@@ -51,7 +54,7 @@ export function normalizeParrotState(state) {
     hatched: parrot.hatched ?? true,
     fedToday: isSameDay ? Boolean(parrot.fedToday) : false,
   }));
-  return { ...base, decorations: base.decorations ?? [], sounds: base.sounds?.length ? base.sounds : ['budgie'], selectedSound: base.selectedSound ?? 'budgie', dailyCorrect: isSameDay ? (base.dailyCorrect ?? 0) : 0, parrots, lastVisitDay: today };
+  return { ...base, decorations: base.decorations ?? [], sounds: [...new Set([...PARROT_SOUNDS.slice(0, 5).map((sound) => sound.id), ...(base.sounds ?? [])])], selectedSound: base.selectedSound ?? 'budgie', dailyCorrect: isSameDay ? (base.dailyCorrect ?? 0) : 0, parrots, lastVisitDay: today };
 }
 
 export function loadParrotState() {
@@ -100,8 +103,19 @@ export function rewardCorrectAnswer(state) {
   };
 }
 
-export function selectParrotSound(state, soundId) {
-  return state.sounds.includes(soundId) ? { ...state, selectedSound: soundId } : state;
+export function getParrotSound(state, parrot) {
+  if (state.sounds.includes(parrot.soundId)) return parrot.soundId;
+  if (parrot.id.includes('budgie')) return 'budgie';
+  if (parrot.id.includes('cockatiel')) return 'cockatiel';
+  if (parrot.id.includes('lorikeet')) return 'lorikeet';
+  if (parrot.id.includes('amazon')) return 'amazon';
+  if (parrot.id.includes('macaw')) return 'macaw';
+  return PARROT_SOUNDS[parrot.id.length % 5].id;
+}
+
+export function selectParrotSound(state, soundId, parrotId) {
+  if (!state.sounds.includes(soundId)) return state;
+  return { ...state, parrots: state.parrots.map((parrot) => parrot.id === parrotId ? { ...parrot, soundId } : parrot) };
 }
 
 export function getParrotDefinition(owned) {

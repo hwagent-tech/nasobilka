@@ -491,7 +491,7 @@ export default function App() {
           onToggleCage={(parrotId) => setParrotState((current) => toggleParrotInCage(current, parrotId))}
           onClaimGift={() => setParrotState((current) => claimDailyGift(current))}
           onHatch={(parrotId) => setParrotState((current) => hatchParrot(current, parrotId))}
-          onSelectSound={(soundId) => setParrotState((current) => selectParrotSound(current, soundId))}
+          onSelectSound={(soundId, parrotId) => setParrotState((current) => selectParrotSound(current, soundId, parrotId))}
         />
       ) : (
         <main className="content-single">
