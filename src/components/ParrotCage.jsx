@@ -1,31 +1,29 @@
 import { useRef, useState } from 'react';
+import { playBirdSound as chirp } from '../birdAudio';
 import { CAGE_CAPACITY, DECORATIONS, PARROT_SOUNDS, getParrotDefinition, getParrotSound, getParrotSummary, todayKey } from '../parrots';
 
-function chirp(soundId = 'budgie') {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
-  const context = new AudioContext();
-  const calls = {
-    budgie: [1200, 1500, 1320], cockatiel: [880, 1174, 988], lorikeet: [720, 940, 760, 1020],
-    amazon: [620, 520, 690], macaw: [330, 280, 390], morning: [784, 988, 1175, 1568, 1175, 988], forest: [1047, 784, 880, 1319, 1047, 784], lullaby: [659, 784, 988, 784, 659, 587, 523], bell: [1046, 1568], water: [900, 650, 1100],
-  };
-  (calls[soundId] ?? calls.budgie).forEach((frequency, index) => {
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    const start = context.currentTime + index * 0.09;
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
-    gain.gain.setValueAtTime(0.001, start);
-    gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(start);
-    oscillator.stop(start + 0.17);
-  });
-  window.setTimeout(() => context.close(), 1200);
-}
 
-function ParrotAvatar({ color, size }) {
+function ParrotAvatar({ color, size, belly = '#fff0dc' }) {
+  if (size === 'tiny') return (
+    <span className="parrot-avatar tiny" aria-hidden="true">
+      <svg viewBox="0 0 100 110">
+        <path fill={color} d="M37 78 30 98 49 88 65 98 61 77Z" />
+        <path className="parrot-feet" d="M40 85v12m20-12v12M34 97h12m8 0h12" />
+        <ellipse cx="50" cy="58" rx="35" ry="34" fill={color} />
+        <circle cx="50" cy="36" r="28" fill={color} />
+        <ellipse cx="50" cy="65" rx="24" ry="23" fill={belly} />
+        <path className="parrot-wing left" d="M22 48Q6 61 24 76Q35 67 29 52Z" />
+        <path className="parrot-wing right" d="M78 48Q94 61 76 76Q65 67 71 52Z" />
+        <path d="M42 12 46 5 51 12 57 7 58 16" fill={color} stroke={color} strokeWidth="4" strokeLinejoin="round" />
+        <ellipse cx="37" cy="36" rx="5" ry="6" fill="#20334a" />
+        <ellipse cx="63" cy="36" rx="5" ry="6" fill="#20334a" />
+        <circle cx="38" cy="34" r="2" fill="white" /><circle cx="64" cy="34" r="2" fill="white" />
+        <ellipse cx="28" cy="46" rx="7" ry="4" fill="#ef9a9f" opacity=".7" />
+        <ellipse cx="72" cy="46" rx="7" ry="4" fill="#ef9a9f" opacity=".7" />
+        <path d="M43 44 50 53 57 44Z" fill="#ed9b39" />
+      </svg>
+    </span>
+  );
   return (
     <span className={`parrot-avatar ${size}`} aria-hidden="true">
       <svg viewBox="0 0 100 110">
@@ -173,7 +171,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
       </section>
 
       <div className="cage-intro">
-        <h2>Moje papouščí klec</h2>
+        <h2>Moje ptačí klec</h2>
 
       </div>
 
@@ -242,7 +240,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
               >
                 <span className="drinking-drops" aria-hidden="true">💧</span>
                 <span className="grain-pour" aria-hidden="true">•••</span>
-                <ParrotAvatar color={parrot.color} size={parrot.size} />
+                <ParrotAvatar color={parrot.color} size={parrot.size} belly={parrot.belly} />
                 <span className="parrot-name">{owned.nickname || parrot.name}</span>
                 {!owned.fedToday && <span className="feed-price">🌾 {parrot.feedCost}</span>}
               </button>
@@ -258,8 +256,8 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
             if (!parrot) return null;
             return (
               <article key={owned.id}>
-                <ParrotAvatar color={parrot.color} size={parrot.size} />
-                <div><strong>{owned.nickname || parrot.name}</strong><small>{parrot.rarity || 'běžný'} · {parrot.size === 'large' ? 'velký' : parrot.size === 'small' ? 'malý' : 'střední'}</small></div>
+                <ParrotAvatar color={parrot.color} size={parrot.size} belly={parrot.belly} />
+                <div><strong>{owned.nickname || parrot.name}</strong><small>{parrot.rarity || 'běžný'} · {parrot.size === 'large' ? 'velký' : parrot.size === 'tiny' ? 'maličký' : parrot.size === 'small' ? 'malý' : 'střední'}</small></div>
                 <button type="button" onClick={() => onToggleCage(owned.id)} disabled={!owned.active && summary.activeCount >= CAGE_CAPACITY}>{owned.active ? 'Do sbírky' : 'Do voliéry'}</button>
               </article>
             );
@@ -302,7 +300,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
               setRenaming(null);
             }}
           >
-            <div className="rename-bird"><ParrotAvatar color={renaming.color} size={renaming.size} /></div>
+            <div className="rename-bird"><ParrotAvatar color={renaming.color} size={renaming.size} belly={renaming.belly} /></div>
             <h3>Přejmenuj papouška</h3>
             <input value={name} maxLength="18" autoFocus onChange={(event) => setName(event.target.value)} aria-label="Jméno papouška" />
             <div><button type="button" onClick={() => setRenaming(null)}>Zrušit</button><button type="submit">Uložit</button></div>

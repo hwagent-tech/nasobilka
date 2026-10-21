@@ -701,3 +701,6 @@ button {
 .sound-collection label { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .sound-collection select { max-width: 100%; padding: .65rem; border-radius: .75rem; font: inherit; }
 @media (prefers-reduced-motion: reduce) { .free-parrot.drinking .parrot-avatar { animation: none; } }
+
+.parrot-avatar.tiny { width: 64px; height: 74px; }
+.parrot-collection .parrot-avatar.tiny { width: 52px; height: 60px; }

@@ -20,9 +20,13 @@ export const DECORATIONS = [
 ];
 export const PARROT_CATALOG = [
   { id: 'green-budgie', name: 'Zelená andulka', color: '#62bd68', unlockAt: 5, feedCost: 2, size: 'small' },
+  { id: 'tiny-canary', name: 'Kanárek Sluníčko', color: '#f4cf56', belly: '#fff3b5', unlockAt: 10, feedCost: 1, size: 'tiny', defaultSound: 'cockatiel' },
   { id: 'blue-budgie', name: 'Modrá andulka', color: '#52a8e8', unlockAt: 15, feedCost: 2, size: 'small' },
+  { id: 'tiny-sparrow', name: 'Vrabčák Drobeček', color: '#aa8264', belly: '#f6e6ce', unlockAt: 22, feedCost: 1, size: 'tiny', defaultSound: 'budgie' },
   { id: 'cockatiel', name: 'Korela', color: '#e8c75a', unlockAt: 30, feedCost: 3, size: 'medium' },
+  { id: 'tiny-robin', name: 'Červenka Čipinka', color: '#a88b73', belly: '#f49b72', unlockAt: 40, feedCost: 1, size: 'tiny', defaultSound: 'lorikeet' },
   { id: 'lorikeet', name: 'Lori duhový', color: '#ef6f75', unlockAt: 50, feedCost: 3, size: 'medium' },
+  { id: 'tiny-finch', name: 'Zebřička Pírko', color: '#a9bbc8', belly: '#fff0dc', unlockAt: 65, feedCost: 1, size: 'tiny', defaultSound: 'cockatiel' },
   { id: 'amazon', name: 'Amazoňan', color: '#39a96b', unlockAt: 75, feedCost: 3, size: 'large' },
   { id: 'macaw', name: 'Ara arakanga', color: '#df4f50', unlockAt: 105, feedCost: 3, size: 'large' },
   { id: 'violet-budgie', name: 'Fialová andulka', color: '#9b70d9', unlockAt: 140, feedCost: 3, size: 'small' },
@@ -105,6 +109,8 @@ export function rewardCorrectAnswer(state) {
 
 export function getParrotSound(state, parrot) {
   if (state.sounds.includes(parrot.soundId)) return parrot.soundId;
+  const definition = getParrotDefinition(parrot);
+  if (definition.defaultSound) return definition.defaultSound;
   if (parrot.id.includes('budgie')) return 'budgie';
   if (parrot.id.includes('cockatiel')) return 'cockatiel';
   if (parrot.id.includes('lorikeet')) return 'lorikeet';
