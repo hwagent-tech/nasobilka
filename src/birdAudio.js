@@ -1,6 +1,5 @@
 const calls = {
   budgie: [1200, 1500, 1320], cockatiel: [880, 1174, 988], lorikeet: [720, 940, 760, 1020],
-  amazon: [620, 780, 520, 830, 690], macaw: [330, 440, 280, 390],
   morning: [784, 988, 1175, 1568, 1175, 988], forest: [1047, 784, 880, 1319, 1047, 784],
   lullaby: [659, 784, 988, 784, 659, 587, 523], bell: [1046, 1568], water: [900, 650, 1100],
 };
@@ -8,6 +7,18 @@ const calls = {
 // Original synthesized phrases inspired by songbird sweeps and alternating trills.
 // Each syllable: offset, duration, starting pitch, turning pitch, ending pitch.
 const songs = {
+  amazon: [
+    [0, .15, 1250, 1660, 1560], [.2, .14, 1560, 1940, 1800],
+    [.4, .21, 1660, 2100, 1860],
+    ...Array.from({ length: 6 }, (_, i) => [.78 + i * .085, .07, i % 2 ? 1660 : 1480, i % 2 ? 1980 : 1800, i % 2 ? 1800 : 1660]),
+    [1.42, .18, 1560, 2100, 1980], [1.67, .24, 1860, 2240, 2100],
+  ],
+  macaw: [
+    [0, .21, 740, 1040, 980], [.29, .2, 980, 1280, 1170],
+    [.57, .24, 880, 1200, 1100],
+    ...Array.from({ length: 4 }, (_, i) => [1.02 + i * .115, .095, i % 2 ? 1040 : 880, i % 2 ? 1320 : 1170, i % 2 ? 1170 : 1040]),
+    [1.6, .22, 980, 1320, 1240], [1.9, .28, 1100, 1480, 1320],
+  ],
   morning: [
     [0, .14, 1800, 2600, 2200], [.18, .12, 2100, 3000, 2400],
     [.36, .16, 2300, 3200, 2700],
@@ -37,10 +48,9 @@ export async function playBirdSound(soundId = 'budgie') {
     // Mobile browsers may create the context suspended even after a tap.
     if (context.state === 'suspended') await context.resume();
     const song = songs[soundId];
-    const deepVoice = soundId === 'amazon' || soundId === 'macaw';
     const notes = calls[soundId] ?? calls.budgie;
-    const step = deepVoice ? 0.18 : 0.09;
-    const duration = deepVoice ? 0.25 : 0.17;
+    const step = 0.09;
+    const duration = 0.17;
     const startTime = context.currentTime + 0.02;
     if (song) {
       song.forEach(([offset, length, low, high, end], index) => {
@@ -59,15 +69,13 @@ export async function playBirdSound(soundId = 'budgie') {
         oscillator.stop(start + length + .01);
       });
     } else notes.forEach((frequency, index) => {
-      // Harmonics keep the deeper voices audible on small phone speakers.
-      const harmonics = deepVoice ? [[1, 0.12], [2, 0.07], [3, 0.035]] : [[1, 0.12]];
+      const harmonics = [[1, 0.12]];
       harmonics.forEach(([multiple, volume]) => {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
         const start = startTime + index * step;
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(frequency * multiple, start);
-        if (deepVoice) oscillator.frequency.exponentialRampToValueAtTime(frequency * multiple * 0.85, start + duration);
         gain.gain.setValueAtTime(0.001, start);
         gain.gain.exponentialRampToValueAtTime(volume, start + 0.025);
         gain.gain.exponentialRampToValueAtTime(0.001, start + duration - 0.02);
