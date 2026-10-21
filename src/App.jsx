@@ -4,7 +4,7 @@ import Question from './components/Question';
 import Settings from './components/Settings';
 import Stats from './components/Stats';
 import ParrotCage from './components/ParrotCage';
-import { claimDailyGift, feedParrot, getParrotSummary, hatchParrot, loadParrotState, renameParrot, rewardCorrectAnswer, saveParrotState, toggleParrotInCage } from './parrots';
+import { claimDailyGift, feedParrot, getParrotSummary, hatchParrot, loadParrotState, renameParrot, rewardCorrectAnswer, saveParrotState, selectParrotSound, toggleParrotInCage } from './parrots';
 import {
   DEFAULT_MASTERY_TIME_LIMIT_SECONDS,
   MAX_TABLE,
@@ -274,7 +274,7 @@ export default function App() {
           setHeartAvailable(false);
           setFeedback({
             status: 'wrong',
-            message: 'Srdíčko zachránilo tvoji sérii. Zkus to znovu.',
+            message: 'Zkus to znovu',
           });
         } else {
           streakRef.current = 0;
@@ -292,7 +292,7 @@ export default function App() {
       if (!currentRoundProtected.current) {
         setFeedback({
           status: 'wrong',
-          message: 'Špatně. Zkus najít správnou odpověď.',
+          message: 'Zkus to znovu',
         });
       }
 
@@ -318,8 +318,11 @@ export default function App() {
       return;
     }
 
+    const earnedGrain = elapsed < masteryTimeLimitSeconds * 1000;
     setQuestionResolved(true);
-    setParrotState((current) => rewardCorrectAnswer(current));
+    if (earnedGrain) {
+      setParrotState((current) => rewardCorrectAnswer(current));
+    }
     setSeriesTotal((count) => count + 1);
     if (currentRoundHadMistake.current) {
       if (!currentRoundProtected.current) {
@@ -481,12 +484,14 @@ export default function App() {
         </main>
       ) : view === 'cage' ? (
         <ParrotCage
+          onMove={(id, position) => setParrotState((current) => ({ ...current, positions: { ...current.positions, [id]: position } }))}
           state={parrotState}
           onFeed={(parrotId) => setParrotState((current) => feedParrot(current, parrotId))}
           onRename={(parrotId, name) => setParrotState((current) => renameParrot(current, parrotId, name))}
           onToggleCage={(parrotId) => setParrotState((current) => toggleParrotInCage(current, parrotId))}
           onClaimGift={() => setParrotState((current) => claimDailyGift(current))}
           onHatch={(parrotId) => setParrotState((current) => hatchParrot(current, parrotId))}
+          onSelectSound={(soundId) => setParrotState((current) => selectParrotSound(current, soundId))}
         />
       ) : (
         <main className="content-single">

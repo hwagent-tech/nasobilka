@@ -1,11 +1,15 @@
 import { useRef, useState } from 'react';
-import { CAGE_CAPACITY, DECORATIONS, PARROT_CATALOG, getParrotSummary, todayKey } from '../parrots';
+import { CAGE_CAPACITY, DECORATIONS, PARROT_SOUNDS, getParrotDefinition, getParrotSummary, todayKey } from '../parrots';
 
-function chirp() {
+function chirp(soundId = 'budgie') {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
   const context = new AudioContext();
-  [880, 1174, 988].forEach((frequency, index) => {
+  const calls = {
+    budgie: [1200, 1500, 1320], cockatiel: [880, 1174, 988], lorikeet: [720, 940, 760, 1020],
+    amazon: [620, 520, 690], macaw: [330, 280, 390], bell: [1046, 1568], water: [900, 650, 1100],
+  };
+  (calls[soundId] ?? calls.budgie).forEach((frequency, index) => {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     const start = context.currentTime + index * 0.09;
@@ -66,22 +70,81 @@ function SpeckledEgg({ accent, variant }) {
   );
 }
 
-export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onClaimGift, onHatch }) {
+export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onClaimGift, onHatch, onSelectSound, onMove }) {
   const [celebrating, setCelebrating] = useState(null);
   const [renaming, setRenaming] = useState(null);
   const [name, setName] = useState('');
   const [section, setSection] = useState('cage');
   const [showGift, setShowGift] = useState(false);
   const [hatching, setHatching] = useState(null);
+  const [activeDecoration, setActiveDecoration] = useState(null);
   const holdTimer = useRef(null);
   const longPressTriggered = useRef(false);
+  const drag = useRef(null);
+  const [moving, setMoving] = useState(null);
   const summary = getParrotSummary(state);
+
+  function position(id) {
+    const point = moving?.id === id ? moving : state.positions?.[id];
+    return point ? { left: `${point.x}%`, top: `${point.y}%`, right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' } : {};
+  }
+
+  function moveHandlers(id, parrot) {
+    return {
+      'data-moving': moving?.id === id ? 'true' : undefined,
+      onPointerDown(event) {
+        if (!event.isPrimary || event.button !== 0) return;
+        const item = event.currentTarget.getBoundingClientRect();
+        const area = event.currentTarget.closest('.parrot-habitat').getBoundingClientRect();
+        drag.current = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, centerX: item.left + item.width / 2, centerY: item.top + item.height / 2, width: item.width, height: item.height, area, moved: false };
+        longPressTriggered.current = false;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        if (parrot) startHold(parrot);
+      },
+      onPointerMove(event) {
+        const current = drag.current;
+        if (!current || current.id !== id || current.pointerId !== event.pointerId) return;
+        const dx = event.clientX - current.startX;
+        const dy = event.clientY - current.startY;
+        if (!current.moved && Math.hypot(dx, dy) < 8) return;
+        if (longPressTriggered.current && !current.moved) return;
+        current.moved = true;
+        endHold();
+        const { area } = current;
+        const halfWidth = Math.min(current.width / 2, area.width / 2);
+        const halfHeight = Math.min(current.height / 2, area.height / 2);
+        current.position = {
+          x: Math.max(halfWidth, Math.min(area.width - halfWidth, current.centerX + dx - area.left)) / area.width * 100,
+          y: Math.max(halfHeight, Math.min(area.height - halfHeight, current.centerY + dy - area.top)) / area.height * 100,
+        };
+        setMoving({ id, ...current.position });
+      },
+      onPointerUp(event) {
+        endHold();
+        const current = drag.current;
+        if (!current || current.pointerId !== event.pointerId) return;
+        if (current.moved) {
+          longPressTriggered.current = true;
+          onMove(id, current.position);
+        }
+        drag.current = null;
+        setMoving(null);
+      },
+      onPointerCancel() {
+        endHold();
+        drag.current = null;
+        setMoving(null);
+        longPressTriggered.current = true;
+      },
+      onKeyDown() { longPressTriggered.current = false; },
+    };
+  }
 
   function feed(parrot) {
     if (!parrot.fedToday && state.grain < parrot.feedCost) return;
     if (!parrot.fedToday) onFeed(parrot.id);
     setCelebrating(parrot.id);
-    chirp();
+    chirp(state.selectedSound);
     window.setTimeout(() => setCelebrating(null), 1200);
   }
 
@@ -108,7 +171,8 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
 
       <div className="cage-intro">
         <h2>Moje papouščí klec</h2>
-        <p>Každého papouška dnes nakrm zvlášť klepnutím.</p>
+        <p>Klepnutím nakrmíš papouška nebo rozezníš dárek. Papoušky i dárky můžeš přesouvat prstem.</p>
+        <small>Podržením papouška ho přejmenuješ. Po každých 4 správných odpovědích dostane jeden papoušek hlad.</small>
         <small>{summary.hungryCount ? `Dnešní cíl: nakrmit ještě ${summary.hungryCount}` : 'Dnešní péče je hotová!'}</small>
       </div>
 
@@ -124,10 +188,10 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
           <div className="habitat-branch branch-two" aria-hidden="true" />
           {state.decorations.map((decorationId, index) => {
             const decoration = DECORATIONS.find((item) => item.id === decorationId);
-            return decoration ? <span key={decoration.id} className={`habitat-decoration decoration-${index}`}>{decoration.icon}</span> : null;
+            return decoration ? <button type="button" aria-label={decoration.name} key={decoration.id} {...moveHandlers(`gift-${decoration.id}`)} style={position(`gift-${decoration.id}`)} className={`habitat-decoration decoration-${index} gift-${decoration.id} ${activeDecoration === decoration.id ? 'active' : ''}`} onClick={() => { if (longPressTriggered.current) return; setActiveDecoration(decoration.id); chirp(decoration.id === 'bell' ? 'bell' : decoration.id === 'bath' ? 'water' : state.selectedSound); window.setTimeout(() => setActiveDecoration(null), 900); }}>{decoration.icon}</button> : null;
           })}
           {state.parrots.filter((item) => item.active).map((owned, index) => {
-            const parrot = PARROT_CATALOG.find((item) => item.id === owned.id);
+            const parrot = getParrotDefinition(owned);
             if (!parrot) return null;
             const canFeed = !owned.fedToday && state.grain >= parrot.feedCost;
             const positionStyle = {
@@ -135,6 +199,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
               '--parrot-left': `${8 + ((index * 29) % 76)}%`,
               '--parrot-top': `${18 + ((index * 37) % 58)}%`,
               '--hop-delay': `${(index % 5) * -0.7}s`,
+              ...position(`parrot-${parrot.id}`),
             };
 
             if (!owned.hatched) {
@@ -144,7 +209,9 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
                   type="button"
                   className={`parrot-egg ${hatching === parrot.id ? 'hatching' : ''}`}
                   style={positionStyle}
+                  {...moveHandlers(`parrot-${parrot.id}`)}
                   onClick={() => {
+                    if (longPressTriggered.current) return;
                     if (hatching) return;
                     setHatching(parrot.id);
                     window.setTimeout(() => {
@@ -165,10 +232,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
                 type="button"
                 className={`free-parrot ${owned.fedToday ? 'fed' : 'hungry'} ${celebrating === parrot.id ? 'celebrating' : ''}`}
                 style={positionStyle}
-                onPointerDown={() => startHold({ ...parrot, ...owned })}
-                onPointerUp={endHold}
-                onPointerCancel={endHold}
-                onPointerLeave={endHold}
+                {...moveHandlers(`parrot-${parrot.id}`, { ...parrot, ...owned })}
                 onClick={() => {
                   if (longPressTriggered.current) return;
                   feed({ ...parrot, ...owned });
@@ -188,7 +252,7 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
       ) : (
         <section className="parrot-collection">
           {state.parrots.map((owned) => {
-            const parrot = PARROT_CATALOG.find((item) => item.id === owned.id);
+            const parrot = getParrotDefinition(owned);
             if (!parrot) return null;
             return (
               <article key={owned.id}>
@@ -198,6 +262,17 @@ export default function ParrotCage({ state, onFeed, onRename, onToggleCage, onCl
               </article>
             );
           })}
+        </section>
+      )}
+
+      {section === 'collection' && (
+        <section className="sound-collection">
+          <h3>Hlasy papoušků</h3>
+          <p>Vyber zvuk, kterým budou papoušci odpovídat.</p>
+          <div>{PARROT_SOUNDS.map((sound) => {
+            const unlocked = state.sounds.includes(sound.id);
+            return <button key={sound.id} type="button" disabled={!unlocked} className={state.selectedSound === sound.id ? 'active' : ''} onClick={() => { onSelectSound(sound.id); chirp(sound.id); }}><span>{unlocked ? '🔊' : '🔒'}</span>{sound.name}</button>;
+          })}</div>
         </section>
       )}
 

@@ -1,5 +1,12 @@
 export const PARROT_STORAGE_KEY = 'multiplication-parrots-v1';
 export const CAGE_CAPACITY = 10;
+export const PARROT_SOUNDS = [
+  { id: 'budgie', name: 'Švitoření andulky' },
+  { id: 'cockatiel', name: 'Pískání korely' },
+  { id: 'lorikeet', name: 'Volání loriho' },
+  { id: 'amazon', name: 'Hlas amazoňana' },
+  { id: 'macaw', name: 'Hluboké volání ary' },
+];
 
 export const DECORATIONS = [
   { id: 'swing', name: 'Dřevěná houpačka', icon: '🪵' },
@@ -31,7 +38,7 @@ export function todayKey() {
 }
 
 export function getDefaultParrotState() {
-  return { grain: 0, totalCorrect: 0, dailyCorrect: 0, parrots: [], decorations: [], careDays: 0, giftClaimedOn: null, lastGift: null, lastVisitDay: todayKey() };
+  return { grain: 0, totalCorrect: 0, dailyCorrect: 0, parrots: [], decorations: [], sounds: ['budgie'], selectedSound: 'budgie', careDays: 0, activitySinceHunger: 0, giftClaimedOn: null, lastGift: null, lastVisitDay: todayKey() };
 }
 
 export function normalizeParrotState(state) {
@@ -44,7 +51,7 @@ export function normalizeParrotState(state) {
     hatched: parrot.hatched ?? true,
     fedToday: isSameDay ? Boolean(parrot.fedToday) : false,
   }));
-  return { ...base, decorations: base.decorations ?? [], dailyCorrect: isSameDay ? (base.dailyCorrect ?? 0) : 0, parrots, lastVisitDay: today };
+  return { ...base, decorations: base.decorations ?? [], sounds: base.sounds?.length ? base.sounds : ['budgie'], selectedSound: base.selectedSound ?? 'budgie', dailyCorrect: isSameDay ? (base.dailyCorrect ?? 0) : 0, parrots, lastVisitDay: today };
 }
 
 export function loadParrotState() {
@@ -66,28 +73,45 @@ export function rewardCorrectAnswer(state) {
   const unlocked = PARROT_CATALOG.filter(
     (parrot) => parrot.unlockAt <= totalCorrect && !ownedIds.has(parrot.id),
   );
+  const activitySinceHunger = (current.activitySinceHunger ?? 0) + 1;
+  let nextParrots = [
+    ...current.parrots,
+    ...unlocked.map((parrot, index) => ({
+      id: parrot.id,
+      fedToday: false,
+      hatched: false,
+      active: current.parrots.filter((item) => item.active).length + index < CAGE_CAPACITY,
+    })),
+  ];
+  let nextActivity = activitySinceHunger;
+  if (activitySinceHunger >= 4) {
+    const fedIndex = nextParrots.findIndex((parrot) => parrot.active && parrot.hatched && parrot.fedToday);
+    if (fedIndex >= 0) nextParrots = nextParrots.map((parrot, index) => index === fedIndex ? { ...parrot, fedToday: false } : parrot);
+    nextActivity = 0;
+  }
   return {
     ...current,
     grain: current.grain + 1,
     totalCorrect,
     dailyCorrect: current.dailyCorrect + 1,
-    parrots: [
-      ...current.parrots,
-      ...unlocked.map((parrot, index) => ({
-        id: parrot.id,
-        fedToday: false,
-        hatched: false,
-        active: current.parrots.filter((item) => item.active).length + index < CAGE_CAPACITY,
-      })),
-    ],
+    parrots: nextParrots,
+    activitySinceHunger: nextActivity,
     newlyUnlocked: unlocked.map((parrot) => parrot.id),
   };
 }
 
+export function selectParrotSound(state, soundId) {
+  return state.sounds.includes(soundId) ? { ...state, selectedSound: soundId } : state;
+}
+
+export function getParrotDefinition(owned) {
+  return PARROT_CATALOG.find((item) => item.id === owned.id) ?? owned;
+}
+
 export function feedParrot(state, parrotId) {
   const current = normalizeParrotState(state);
-  const catalogItem = PARROT_CATALOG.find((parrot) => parrot.id === parrotId);
   const owned = current.parrots.find((parrot) => parrot.id === parrotId);
+  const catalogItem = owned ? getParrotDefinition(owned) : null;
   if (!catalogItem || !owned || owned.fedToday || current.grain < catalogItem.feedCost) return current;
 
   return {
@@ -129,7 +153,7 @@ export function toggleParrotInCage(state, parrotId) {
   return {
     ...current,
     parrots: current.parrots.map((parrot) =>
-      parrot.id === parrotId ? { ...parrot, active: !parrot.active, fedToday: false } : parrot,
+      parrot.id === parrotId ? { ...parrot, active: !parrot.active } : parrot,
     ),
   };
 }
@@ -145,19 +169,33 @@ export function claimDailyGift(state) {
     (item) => !Number.isFinite(item.unlockAt) && !current.parrots.some((parrot) => parrot.id === item.id),
   );
   const undecorated = DECORATIONS.find((item) => !current.decorations.includes(item.id));
+  const unheardSound = PARROT_SOUNDS.find((item) => !current.sounds.includes(item.id));
   let gift;
   let next = { ...current, careDays: nextCareDay, giftClaimedOn: today };
 
-  if (nextCareDay % 3 === 0 && unownedSpecial) {
+  if (nextCareDay % 4 === 0) {
+    next.grain = current.grain + 10;
+    gift = { type: 'grain', label: '10 bonusových zrní', icon: '🌾' };
+  } else if (nextCareDay % 5 === 0 && unheardSound) {
+    next.sounds = [...current.sounds, unheardSound.id];
+    gift = { type: 'sound', id: unheardSound.id, label: unheardSound.name, icon: '🔊' };
+  } else if (nextCareDay % 3 === 0 && unownedSpecial) {
     const activeCount = current.parrots.filter((parrot) => parrot.active).length;
     next.parrots = [...current.parrots, { id: unownedSpecial.id, fedToday: true, active: activeCount < CAGE_CAPACITY, hatched: false }];
     gift = { type: 'parrot', id: unownedSpecial.id, label: unownedSpecial.name, icon: '🥚' };
   } else if (undecorated) {
     next.decorations = [...current.decorations, undecorated.id];
     gift = { type: 'decoration', id: undecorated.id, label: undecorated.name, icon: undecorated.icon };
+  } else if (unheardSound) {
+    next.sounds = [...current.sounds, unheardSound.id];
+    gift = { type: 'sound', id: unheardSound.id, label: unheardSound.name, icon: '🔊' };
   } else {
-    next.grain = current.grain + 10;
-    gift = { type: 'grain', label: '10 bonusových zrní', icon: '🌾' };
+    const palette = ['#55c9a5', '#8d73df', '#ef7189', '#4aa8e8', '#f0b542', '#60b85c'];
+    const variantNumber = current.parrots.filter((item) => item.id.startsWith('color-variant-')).length + 1;
+    const generated = { id: `color-variant-${variantNumber}`, name: `Barevný papoušek ${variantNumber}`, color: palette[(variantNumber - 1) % palette.length], feedCost: 3, size: ['small', 'medium', 'large'][variantNumber % 3], rarity: 'barevná varianta' };
+    const activeCount = current.parrots.filter((parrot) => parrot.active).length;
+    next.parrots = [...current.parrots, { ...generated, fedToday: true, active: activeCount < CAGE_CAPACITY, hatched: false }];
+    gift = { type: 'parrot', id: generated.id, label: generated.name, icon: '🥚' };
   }
 
   return { ...next, lastGift: gift };
@@ -168,7 +206,7 @@ export function getParrotSummary(state) {
   const active = current.parrots.filter((parrot) => parrot.active);
   const hungry = active.filter((parrot) => !parrot.fedToday);
   const grainNeeded = hungry.reduce((sum, parrot) => {
-    return sum + (PARROT_CATALOG.find((item) => item.id === parrot.id)?.feedCost ?? 0);
+    return sum + (getParrotDefinition(parrot)?.feedCost ?? 0);
   }, 0);
   const nextParrot = PARROT_CATALOG.find(
     (item) => Number.isFinite(item.unlockAt) && item.unlockAt > current.totalCorrect,

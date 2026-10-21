@@ -506,7 +506,13 @@ button {
 .parrot-habitat { position: relative; min-height: 440px; overflow: hidden; border: 1px solid rgba(46,94,145,.12); border-radius: 30px; background: linear-gradient(180deg, #dff4ff 0%, #f1fbf3 66%, #d4edc2 100%); box-shadow: inset 0 -25px 50px rgba(66,139,82,.12), 0 16px 40px rgba(37,64,97,.1); }
 .habitat-sun { position: absolute; top: 22px; right: 28px; color: #ffc34d; font-size: 3rem; filter: drop-shadow(0 5px 8px rgba(255,183,40,.25)); }
 .habitat-branch { position: absolute; height: 10px; border-radius: 999px; background: #94613d; box-shadow: 0 5px 0 #73472d; transform: rotate(-3deg); }
-.habitat-decoration { position: absolute; z-index: 1; font-size: 2.5rem; filter: drop-shadow(0 5px 5px rgba(37,64,97,.15)); }
+.habitat-decoration { position: absolute; z-index: 4; padding: 3px; border: 0; background: transparent; font-size: 2.5rem; filter: drop-shadow(0 5px 5px rgba(37,64,97,.15)); }
+.habitat-decoration.active { animation: decoration-bounce .75s ease; }
+.habitat-decoration.gift-swing.active { animation: swing-rock .8s ease-in-out; transform-origin: top center; }
+.habitat-decoration.gift-bath.active::after { content: '💦'; position: absolute; inset: -20px; animation: splash .7s ease-out both; }
+.habitat-decoration, .free-parrot, .parrot-egg { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.parrot-habitat [data-moving="true"] { animation: none; z-index: 10; cursor: grabbing; }
+.habitat-decoration { min-width: 48px; min-height: 48px; }
 .decoration-0 { left: 8%; bottom: 6%; }
 .decoration-1 { right: 8%; bottom: 5%; }
 .decoration-2 { left: 44%; bottom: 3%; }
@@ -562,6 +568,13 @@ button {
 .gift-reveal > strong { font-size: 1.35rem; }
 .gift-reveal small { color: #66809d; }
 .gift-reveal button { margin-top: 8px; padding: 11px 25px; border: 0; border-radius: 13px; background: #102033; color: white; font-weight: 800; }
+.sound-collection { margin-top: 16px; padding: 16px; border-radius: 20px; background: rgba(255,255,255,.78); }
+.sound-collection h3 { margin: 0 0 3px; }
+.sound-collection p { margin: 0 0 12px; color: #66809d; font-size: .85rem; }
+.sound-collection > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sound-collection button { display: grid; place-items: center; gap: 3px; min-height: 68px; padding: 8px; border: 2px solid transparent; border-radius: 14px; background: #edf3f7; color: #496984; font-size: .72rem; font-weight: 800; }
+.sound-collection button.active { border-color: #53ae76; background: #e2f7e9; color: #26744a; }
+.sound-collection button:disabled { opacity: .48; }
 .rename-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(16,32,51,.38); backdrop-filter: blur(4px); }
 .rename-dialog { display: grid; gap: 14px; width: min(100%, 340px); padding: 24px; border-radius: 26px; background: white; box-shadow: 0 22px 70px rgba(16,32,51,.3); text-align: center; }
 .rename-bird { display: grid; place-items: center; height: 86px; }
@@ -577,6 +590,9 @@ button {
 @keyframes wing-right { to { transform: rotate(-24deg) translateX(5px); } }
 @keyframes free-parrot-hop { 0%, 82%, 100% { transform: translate(-50%, -50%) translateY(0) rotate(0); } 88% { transform: translate(-50%, -50%) translateY(-13px) rotate(-4deg); } 94% { transform: translate(-50%, -50%) translateY(0) rotate(3deg); } }
 @keyframes egg-hatch { 0%,100% { transform: rotate(0) translateY(0) scale(1); } 12% { transform: rotate(-9deg); } 24% { transform: rotate(10deg) translateY(-5px); } 36% { transform: rotate(-12deg); } 48% { transform: rotate(12deg) translateY(-9px); } 62% { transform: rotate(-8deg); } 78% { transform: rotate(7deg) scale(1.08); } 100% { opacity: 0; transform: translateY(-20px) scale(1.35); } }
+@keyframes decoration-bounce { 40% { transform: translateY(-14px) scale(1.18); } }
+@keyframes swing-rock { 25% { transform: rotate(-22deg); } 50% { transform: rotate(18deg); } 75% { transform: rotate(-10deg); } }
+@keyframes splash { 0% { opacity: 0; transform: scale(.4); } 45% { opacity: 1; transform: scale(1.2) translateY(-12px); } 100% { opacity: 0; transform: scale(1.6) translateY(-22px); } }
 
 @media (max-width: 920px) {
   .hero,

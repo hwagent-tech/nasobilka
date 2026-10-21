@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nasobilka-app-v2';
+const CACHE_NAME = 'nasobilka-app-v3';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 function isNavigationRequest(request) {
@@ -52,6 +52,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(event.request.url);
+  // Vite modules must always come from the running development server.
+  if (url.origin !== self.location.origin ||
+      url.pathname.startsWith('/src/') ||
+      url.pathname.startsWith('/@') ||
+      url.pathname.startsWith('/node_modules/')) {
     return;
   }
 
